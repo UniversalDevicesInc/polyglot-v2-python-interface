@@ -19,8 +19,6 @@ import paho.mqtt.client as mqtt
 from threading import Thread, Timer
 from copy import deepcopy
 
-VERSION = '0.1'
-
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
 
