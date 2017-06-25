@@ -1,1 +1,1 @@
-from polyinterface import Interface, Node, Controller, LOGGER
+from .polyinterface import Interface, Node, Controller, LOGGER

@@ -29,7 +29,7 @@ def setup_log():
    path = os.path.dirname(sys.argv[0])
    if not os.path.exists(path + '/logs'):
        os.makedirs(path + '/logs')
-   log_filename = path + "/logs/lifx.log"
+   log_filename = path + "/logs/debug.log"
    log_level = logging.DEBUG  # Could be e.g. "DEBUG" or "WARNING"
 
    #### Logging Section ################################################################################
