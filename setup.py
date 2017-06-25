@@ -4,7 +4,7 @@ from distutils.core import setup
 setup(name='lifxlan',
       version='1.0.0',
       description='UDI Polyglot v2 Interface',
-      url='http://github.com/mclarkk/lifxlan',
+      url='https://github.com/Einstein42/udi-polyglot-interface',
       author='James Milne',
       author_email='milne.james@gmail.com',
       license='MIT',
