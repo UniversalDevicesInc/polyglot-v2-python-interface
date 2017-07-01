@@ -24,10 +24,10 @@ def warning_on_one_line(message, category, filename, lineno, file=None, line=Non
 
 def setup_log():
    # Log Location
-   path = os.path.dirname(sys.argv[0])
-   if not os.path.exists(path + '/logs'):
-       os.makedirs(path + '/logs')
-   log_filename = path + "/logs/debug.log"
+   #path = os.path.dirname(sys.argv[0])
+   if not os.path.exists('./logs'):
+       os.makedirs('./logs')
+   log_filename = "./logs/debug.log"
    log_level = logging.DEBUG  # Could be e.g. "DEBUG" or "WARNING"
 
    #### Logging Section ################################################################################
