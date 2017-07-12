@@ -74,16 +74,16 @@ class Interface:
 
     __exists = False
 
-    def __init__(self):
+    def __init__(self, envVar):
         if self.__exists:
             warnings.warn('Only one Interface is allowed.')
             return
         self.connected = False
-        self.profileNum = str(os.environ.get("LIFX_NS"))
+        self.profileNum = str(os.environ.get(envVar))
         self.topicPolyglotConnection = 'udi/polyglot/connections/polyglot'
         self.topicInput = 'udi/polyglot/ns/{}'.format(self.profileNum)
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
-        self._mqttc = mqtt.Client('lifx', True)
+        self._mqttc = mqtt.Client(envVar, True)
         self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
         self._mqttc.on_message = self._message
