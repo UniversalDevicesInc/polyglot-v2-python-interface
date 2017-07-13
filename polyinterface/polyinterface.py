@@ -302,7 +302,6 @@ class Interface:
         try:
             for callback in self.__configObservers:
                 callback(config)
-        de
         except KeyError as e:
             LOGGER.error('Could not find Nodes in Config')
 
