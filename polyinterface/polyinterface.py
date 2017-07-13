@@ -68,6 +68,8 @@ warnings.resetwarnings()
 class Interface:
     """
     Polyglot Interface Class
+
+    :param envVar: The Name of the variable from ~/.polyglot/.env that has this NodeServer's profile number
     """
     # pylint: disable=too-many-instance-attributes
     # pylint: disable=unused-argument
@@ -104,6 +106,9 @@ class Interface:
         Interface.__exists = True
 
     def bind_toConfig(self, callback):
+        """
+        Gives the ability to bind any methods to be run when the config is received.
+        """
         self.__configObservers.append(callback)
 
     def _connect(self, mqttc, userdata, flags, rc):
@@ -198,10 +203,12 @@ class Interface:
         pass
 
     def start(self):
+        """ Start the asyncio thread """
         self.thread.daemon = True
         self.thread.start()
 
     def start_loop(self):
+        """ Start the asyncio event loop """
         self.loop.create_task(self._start())
         self.loop.run_forever()
 
@@ -254,6 +261,11 @@ class Interface:
             LOGGER.error('MQTT Send Error: {}'.format(err))
 
     def addNode(self, node):
+        """
+        Add a node to the NodeServer
+
+        :param node: Dictionary of node settings. Keys: address, name, node_def_id, primary, and drivers are required.
+        """
         LOGGER.info('Adding node {}({})'.format(node.name, node.address))
         message = {
             'addnode': {
@@ -269,6 +281,9 @@ class Interface:
         self.send(message)
 
     def getNode(self, address):
+        """
+        Get Node by Address of existing nodes.
+        """
         try:
             for node in self.config['nodes']:
                 if node['address'] == address:
@@ -279,10 +294,15 @@ class Interface:
             return False
 
     def inConfig(self, config):
+        """
+        Save incoming config received from Polyglot to Interface.config and then do any functions
+        that are waiting on the config to be received.
+        """
         self.config = config
         try:
             for callback in self.__configObservers:
                 callback(config)
+        de
         except KeyError as e:
             LOGGER.error('Could not find Nodes in Config')
 
