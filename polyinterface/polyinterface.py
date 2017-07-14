@@ -419,6 +419,12 @@ class Controller:
                 n.timeAdded = node['time_added']
                 n.enabled = node['enabled']
                 n.added = node['added']
+        if not self.poly.getNode(self.address):
+            self.addNode(self)
+            LOGGER.info('Waiting on Primary node to be added.......')
+        elif not self.started:
+            self.started = True
+            self.start()
 
     def parseInput(self, input):
         for key in input:
@@ -441,6 +447,9 @@ class Controller:
                     self.nodesAdding.remove(result['addnode']['address'])
         except KeyError as e:
             LOGGER.error('handleResult: {}'.format(e))
+
+    def start(self):
+        self.startPolls()
 
     def startPolls(self, long = 30, short = 10):
         Timer(long, self.longPoll, args = []).start()
