@@ -381,7 +381,7 @@ class Node:
     _commands = {}
     node_def_id = ''
     _sends = {}
-    _drivers = {}
+    _drivers = []
 
 class Controller:
     """
@@ -390,7 +390,7 @@ class Controller:
     def __init__(self, poly):
         try:
             self.poly = poly
-            self.poly.bind_toConfig(self.gotConfig)
+            self.poly.bind_toConfig(self._gotConfig)
             self.name = None
             self.address = None
             self.nodes = {}
@@ -408,7 +408,7 @@ class Controller:
             self.nodes[node.address].start()
 
 
-    def gotConfig(self, config):
+    def _gotConfig(self, config):
         self.polyConfig = config
         for node in config['nodes']:
             if node['address'] in self.nodes:
@@ -434,9 +434,9 @@ class Controller:
                 except KeyError as e:
                     LOGGER.error('parseInput: {}'.format(e))
             elif key == 'result':
-                self.handleResult(input[key])
+                self._handleResult(input[key])
 
-    def handleResult(self, result):
+    def _handleResult(self, result):
         try:
             if 'addnode' in result:
                 if result['addnode']['success'] == True:
@@ -449,7 +449,7 @@ class Controller:
             LOGGER.error('handleResult: {}'.format(e))
 
     def start(self):
-        self.startPolls()
+        pass
 
     def startPolls(self, long = 30, short = 10):
         Timer(long, self.longPoll, args = []).start()

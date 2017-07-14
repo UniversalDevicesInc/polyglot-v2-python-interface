@@ -42,7 +42,7 @@ First step in your new project is to get the Interface ready to go. A built in l
 ```
 # Import the Polyglot Interface to your project
 # You don't have to use the 'as polyglot' but it lead to a little better readability for me
-import polyinterface as polyglot
+import polyinterface
 ```
 Instantiate the logger to allow you to log anything into ./log/debug.log
 ```
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         Grab the "LIFX_NS" variable from the .polyglot/.env file. This is where
         we tell it what profile number this NodeServer is.
         """
-        poly = polyglot.Interface('LIFX_NS')
+        poly = polyinterface.Interface('LIFX_NS')
         poly.start()
         lifx = Control(poly)
         while True:
@@ -89,24 +89,127 @@ Secondly we start our polyglot connections with `poly.start()`. This will take a
 2017-07-01 16:13:23,548 INFO     Sent Connected message to Polyglot
 ```
 
-Now we are connected and ready to go.
+Now we are connected and ready to go. We check the inQueue and run the polyinterface.Control.parseInput method when we receive input.
 
-The next line `lifx = Control(poly)` is our NodeServer class. This is a child class of the polyinterface.Controller class that comes with polyinteface. The parent class handles some of the heavy lifting for you, like parsing and running incoming commands, parsing the config received by Polyglot, handling the results of commands sent TO Polyglot, and the short and long polling interface.
+##### polyinterface.Controller API
+
+The next line `lifx = Control(poly)` is our NodeServer class. This is a child class of the polyinterface.Controller class that comes with polyinteface. The parent class handles some of the heavy lifting for you, like parsing and running incoming commands, checking the config received by Polyglot, handling the results of commands sent TO Polyglot, and the short and long polling interface.
 
 Typically a "Control Node" is created and all sub-nodes (lights, etc) are nested under it. This is done to keep some semblance of cleanliness in the ISY. Consider this best practice.
 
-Once the NodeServer send the connected message to Polyglot, it receives back the running config for that NodeServer that resides in Polyglot's database.
+Once the NodeServer sends the connected message to Polyglot, it receives back the running config for that NodeServer that resides in Polyglot's database.
 
 ```
-class Control(polyglot.Controller):
+class Control(polyinterface.Controller):
 
     def __init__(self, poly):
         super().__init__(poly)
-        LOGGER.info('Started LiFX Protocol')
-
-    def gotConfig(self, config):
-        super(Control, self).gotConfig(config)
-
+        LOGGER.info('Started NodeServer')
 ```
 
-##### polyinterface.Controller API
+Once the configuration is received by Polyglot and the control node is added to the ISY then the start method is automatically called.
+
+```
+def start(self):
+    """
+    In order to have polls you should run the parent method startPolls()
+    you can pass in the timers in seconds. LongPoll first, then ShortPoll.
+    If you don't need Polling then you don't have to start them.
+    """
+    self.startPolls(60, 10)
+    <start your nodeserver code here>
+```
+
+Optional Loop overrides for Polling. ShortPoll is default 10 seconds, longPoll is 30 seconds.
+This is done in the Control class. You must super if you override these or your poll will not work.
+
+```
+    def shortPoll(self, timer = 10):
+        """
+        Overridden shortPoll. It is imperative that you super this if you override it
+        as the threading.Timer loop is in the parent method.
+        """
+        super().shortPoll(timer)
+        <your code here>
+
+    def longPoll(self, timer = 30):
+      """
+      Overridden longPoll. It is imperative that you super this if you override it
+      as the threading.Timer loop is in the parent method.
+      """
+      super().shortPoll(timer)
+      <your code here>
+```
+
+Parent methods in the **polyinterface.Controller** class:
+ - **addNode(Node)**: Node is a polyinterface.Node class instance. This method adds a node to the ISY and Polyglot database. Checks if the node already exists, if it does then run the polyinterface.Node.start() method for that node. If it does not exist, send the command to add it and wait for the response asynchronously. Once the response is received if the node was added successfully, then run its start() method.
+
+ - **startPolls(long = 30, short = 10)**: Use this method to begin the polling timers. Typically called from your NodeServer's .start() method. See example above.
+
+- **parseInput(input)**: this method takes the input from Polyglot and handles any commands or results that are sent to the NodeServer. See
+
+- **toJSON()**: returns a json representation of the control class to LOGGER.debug, useful for testing.
+
+Private methods that should not be overridden:
+
+- **_handleResult(result)**: This is the listener method that waits for incoming results messages and handles anything that it requires. Used to listen for the addNode success or failure messages and run the nodes .start() method if successful.
+
+- **_gotConfig(config)**: This method is executed once the polyinterface.Interface class receives the configuration from Polyglot. It executes the polyinterface.Controller.start() method once it finishes parsing the config.
+
+Node Meta Model Profile data is at the end of every ISY added node to identify and represent the Node in the ISY device. [See Appendix 7.2 of UDI's NodeServer Development Guide](http://www.universal-devices.com/developers/wsdk/5.0.0/ISY-WS-SDK-Node-Server.pdf).
+
+For a controller, simple is better. This says that it will use the **lifxcontrol** node definition in the profile.zip nodedefs.xml:
+```
+drivers = []
+commands = {'DISCOVER': discover}
+node_def_id = 'lifxcontrol'
+```
+
+##### polyinterface.Node API
+
+The **polyinterface.Node** class is used as the Parent class of any nodes you add to Polyglot and the ISY. Example:
+
+```
+class MyNode(polyglotinterface.Node):
+    def __init__(self, parent, primary, address):
+        super().__init__(parent, primary, address, 'My Name in ISY here')
+
+    def start(self):
+        self.query()
+
+    def query(self, command = None):
+      <query something>
+      self.value = <query response>
+      self.setDriver('ST', self.value)      
+
+    def setOn(self, command):
+      <turn something on>
+
+    def setOff(self, command):
+      <turn something off>
+
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 25}]
+
+    _commands = {
+                    'DON': setOn, 'DOF': setOff, 'QUERY': query
+                }
+
+    node_def_id = 'mynode'
+```
+
+When you instantiate the polyinterface.Node class typically they are created from the Control node during some sort of discovery process. You need to pass in the Controller instance, the primary node's address, which is typically the controller, the address of the node itself, and the name as you want it to appear in the ISY.
+
+ISY addresses must be equal to or less than 12 characters long, be unique, and not contain spaces or special characters.
+
+For example:
+```
+myNode = polyinterface.Node(controller, controller.address, thisnode.address, 'Office Light')
+controller.addNode(myNode)
+```
+
+Parent methods in the **polyinterface.Node** class:
+ - **setDriver(driver, value, report = True)**: This will set the driver to the value in the running config. If report = True then we send the status change to Polyglot which updates the ISY value.
+
+ - **reportDrivers()**: Sends an update to Polyglot and ISY of ALL the drivers and their current values.
+
+ - **toJSON()**: Sends a JSON representation of the Node to the Logger as a DEBUG.
