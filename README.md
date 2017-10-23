@@ -137,7 +137,7 @@ This is done in the Control class. You must super if you override these or your 
       Overridden longPoll. It is imperative that you super this if you override it
       as the threading.Timer loop is in the parent method.
       """
-      super().shortPoll(timer)
+      super().longPoll(timer)
       <your code here>
 ```
 

@@ -10,6 +10,7 @@ import warnings
 import time
 import json
 import sys
+import select
 import os
 import queue
 import asyncio
@@ -61,9 +62,22 @@ warnings.simplefilter('error', UserWarning)
 try:
     load_dotenv(join(expanduser("~") + '/.polyglot/.env'))
 except (UserWarning) as e:
-    LOGGER.warning('File does not exist: {} Exiting.'.format(join(expanduser("~") + '/.polyglot/.env')))
-    sys.exit(1)
+    LOGGER.warning('File does not exist: {}.'.format(join(expanduser("~") + '/.polyglot/.env')))
+    # sys.exit(1)
 warnings.resetwarnings()
+
+init = select.select([sys.stdin], [], [], 0.0)[0]
+if init:
+    line = sys.stdin.readline()
+    try:
+        line = json.loads(line)
+        os.environ['PROFILE_NUM'] = line['profileNum']
+        os.environ['MQTT_HOST'] = line['mqttHost']
+        os.environ['MQTT_PORT'] = line['mqttPort']
+        LOGGER.info('Received Config from STDIN.')
+    except:
+        e = sys.exc_info()[0]
+        LOGGER.debug('Invalid formatted input. Skipping. {}'.format(e))
 
 class Interface:
     """
@@ -76,12 +90,18 @@ class Interface:
 
     __exists = False
 
-    def __init__(self, envVar):
+    def __init__(self, envVar = None):
         if self.__exists:
             warnings.warn('Only one Interface is allowed.')
             return
         self.connected = False
-        self.profileNum = str(os.environ.get(envVar))
+        self.profileNum = os.environ.get("PROFILE_NUM")
+        if self.profileNum is None:
+            self.profileNum = os.environ.get(envVar)
+        if self.profileNum is None:
+            LOGGER.error('Profile Number not found in STDIN or .env file. Exiting.')
+            sys.exit(1)
+        self.profileNum = str(self.profileNum)
         self.topicPolyglotConnection = 'udi/polyglot/connections/polyglot'
         self.topicInput = 'udi/polyglot/ns/{}'.format(self.profileNum)
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
@@ -99,8 +119,9 @@ class Interface:
         self.thread = Thread(target=self.start_loop)
         self._longPoll = None
         self._shortPoll = None
-        self._server = os.environ.get("MQTT_HOST")
-        self._port = str(os.environ.get("MQTT_PORT"))
+        self.isyVersion = None
+        self._server = os.environ.get("MQTT_HOST") or '127.0.0.1'
+        self._port = os.environ.get("MQTT_PORT") or '1883'
         self.polyglotConnected = False
         self.__configObservers = []
         Interface.__exists = True
@@ -407,9 +428,9 @@ class Controller:
         else:
             self.nodes[node.address].start()
 
-
     def _gotConfig(self, config):
         self.polyConfig = config
+        self.poly.isyVersion = config['isyVersion']
         for node in config['nodes']:
             if node['address'] in self.nodes:
                 n = self.nodes[node['address']]
