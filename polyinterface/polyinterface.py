@@ -66,7 +66,7 @@ except (UserWarning) as e:
     # sys.exit(1)
 warnings.resetwarnings()
 
-init = select.select([sys.stdin], [], [], 0.0)[0]
+init = select.select([sys.stdin], [], [], 1)[0]
 if init:
     line = sys.stdin.readline()
     try:
