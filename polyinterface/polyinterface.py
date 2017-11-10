@@ -116,7 +116,7 @@ class Interface:
         self.config = None
         self.loop = asyncio.new_event_loop()
         self.inQueue = queue.Queue()
-        self.thread = Thread(target=self.start_loop)
+        #self.thread = Thread(target=self.start_loop)
         self._longPoll = None
         self._shortPoll = None
         self.isyVersion = None
@@ -157,6 +157,8 @@ class Interface:
                     LOGGER.info("MQTT Subscription to " + topic + " failed. This is unusual. MID: " + str(mid) + " Result: " + str(result))
                     # If subscription fails, try to reconnect.
                     self._mqttc.reconnect()
+            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': True}), retain = True)
+            LOGGER.info('Sent Connected message to Polyglot')
         else:
             LOGGER.error("MQTT Failed to connect. Result code: " + str(rc))
 
@@ -223,15 +225,17 @@ class Interface:
         #LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
         pass
 
+    """
     def start(self):
-        """ Start the asyncio thread """
+        # Start the asyncio thread
         self.thread.daemon = True
         self.thread.start()
+    """
 
-    def start_loop(self):
+    def start(self):
         """ Start the asyncio event loop """
-        self.loop.create_task(self._start())
-        self.loop.run_forever()
+        #self.loop.create_task(self._start())
+        self.loop.run_until_complete(self._start())
 
     async def _start(self):
         """
@@ -242,9 +246,6 @@ class Interface:
         try:
             self._mqttc.connect_async(str(self._server), int(self._port), 10)
             self._mqttc.loop_start()
-            time.sleep(.5)
-            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': True}), retain = True)
-            LOGGER.info('Sent Connected message to Polyglot')
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)

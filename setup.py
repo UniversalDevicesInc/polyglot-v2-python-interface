@@ -13,7 +13,7 @@ setup(name='polyinterface',
 	"paho-mqtt",
 	"python-dotenv",
         ],
-      python_requires='~=3.4',
+      python_requires='~=3.5',
       zip_safe=False,
           # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -28,7 +28,6 @@ setup(name='polyinterface',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6'
     ])
