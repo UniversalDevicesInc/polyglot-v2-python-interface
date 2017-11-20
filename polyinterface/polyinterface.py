@@ -452,7 +452,10 @@ class Controller:
         for key in input:
             if key == 'command':
                 try:
-                    self.nodes[input[key]['address']].runCmd(input[key])
+                    if input[key]['address'] == self.address:
+                        self.runCmd(input[key])
+                    else:
+                        self.nodes[input[key]['address']].runCmd(input[key])
                 except KeyError as e:
                     LOGGER.error('parseInput: {}'.format(e))
             elif key == 'result':
@@ -469,6 +472,11 @@ class Controller:
                     self.nodesAdding.remove(result['addnode']['address'])
         except KeyError as e:
             LOGGER.error('handleResult: {}'.format(e))
+
+    def runCmd(self, command):
+        if command['cmd'] in self._commands:
+            fun = self._commands[command['cmd']]
+            fun(self, command)
 
     def start(self):
         pass
