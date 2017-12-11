@@ -12,12 +12,14 @@ import json
 import sys
 import select
 import os
+import ssl
 import queue
-import asyncio
+#import asyncio
 from os.path import join, expanduser
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
 from threading import Thread, Timer
+import multiprocessing
 from copy import deepcopy
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
@@ -74,6 +76,7 @@ if init:
         os.environ['PROFILE_NUM'] = line['profileNum']
         os.environ['MQTT_HOST'] = line['mqttHost']
         os.environ['MQTT_PORT'] = line['mqttPort']
+        os.environ['TOKEN'] = line['token']
         LOGGER.info('Received Config from STDIN.')
     except:
         e = sys.exc_info()[0]
@@ -113,12 +116,15 @@ class Interface:
         self._mqttc.on_disconnect = self._disconnect
         self._mqttc.on_publish = self._publish
         self._mqttc.on_log = self._log
+        self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
+               join(expanduser("~") + '/.polyglot/ssl/client.crt'),
+               join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
+        #self._mqttc.tls_insecure_set(True)
         self.config = None
-        self.loop = asyncio.new_event_loop()
+        #self.loop = asyncio.new_event_loop()
+        self.loop = None
         self.inQueue = queue.Queue()
         #self.thread = Thread(target=self.start_loop)
-        self._longPoll = None
-        self._shortPoll = None
         self.isyVersion = None
         self._server = os.environ.get("MQTT_HOST") or '127.0.0.1'
         self._port = os.environ.get("MQTT_PORT") or '1883'
@@ -172,20 +178,22 @@ class Interface:
         :param msg: Dictionary of MQTT received message. Uses: msg.topic, msg.qos, msg.payload
         """
         try:
-            #LOGGER.debug(msg.payload.decode('utf-8'))
+            inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll']
             parsed_msg = json.loads(msg.payload.decode('utf-8'))
-            if parsed_msg['node'] == self.profileNum: return
-            del parsed_msg['node']
-            for key in parsed_msg:
-                #LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
-                if key == 'config':
-                    self.inConfig(parsed_msg[key])
-                elif key == 'status' or key == 'query' or key == 'command' or key == 'result':
-                    self.input(parsed_msg)
-                elif key == 'connected':
-                    self.polyglotConnected = parsed_msg[key]
-                else:
-                    LOGGER.error('Invalid command received in message from Polyglot: {}'.format(key))
+            #LOGGER.debug(parsed_msg)
+            if 'node' in parsed_msg:
+                if parsed_msg['node'] != 'polyglot': return
+                del parsed_msg['node']
+                for key in parsed_msg:
+                    #LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
+                    if key == 'config':
+                        self.inConfig(parsed_msg[key])
+                    elif key == 'connected':
+                        self.polyglotConnected = parsed_msg[key]
+                    elif key in inputCmds:
+                        self.input(parsed_msg)
+                    else:
+                        LOGGER.error('Invalid command received in message from Polyglot: {}'.format(key))
 
         except (ValueError, json.decoder.JSONDecodeError) as err:
             LOGGER.error('MQTT Received Payload Error: {}'.format(err))
@@ -212,7 +220,7 @@ class Interface:
 
     def _log(self, mqttc, userdata, level, string):
         """ Use for debugging MQTT Packets, disable for normal use, NOISY. """
-        # LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
+        #LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
         pass
 
     def _subscribe(self, mqttc, userdata, mid, granted_qos):
@@ -230,21 +238,22 @@ class Interface:
         # Start the asyncio thread
         self.thread.daemon = True
         self.thread.start()
+
+    def start(self):
+        # Start the asyncio event loop
+        #self.loop.create_task(self._start())
+        self.loop.run_until_complete(self._start())
     """
 
     def start(self):
-        """ Start the asyncio event loop """
-        #self.loop.create_task(self._start())
-        self.loop.run_until_complete(self._start())
-
-    async def _start(self):
         """
         The client start method. Starts the thread for the MQTT Client
         and publishes the connected message.
         """
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
         try:
-            self._mqttc.connect_async(str(self._server), int(self._port), 10)
+            #self._mqttc.connect_async(str(self._server), int(self._port), 10)
+            self._mqttc.connect(str(self._server), int(self._port), 10)
             self._mqttc.loop_start()
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -258,9 +267,9 @@ class Interface:
         message if clean shutdown.
         """
         #self.loop.call_soon_threadsafe(self.loop.stop)
-        self.loop.stop()
-        self._longPoll.cancel()
-        self._shortPoll.cancel()
+        #self.loop.stop()
+        #self._longPoll.cancel()
+        #self._shortPoll.cancel()
         if self.connected:
             LOGGER.info('Disconnecting from MQTT... {}:{}'.format(self._server, self._port))
             self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain = True)
@@ -419,6 +428,9 @@ class Controller:
             self.polyNodes = None
             self.polyConfig = None
             self.nodesAdding = []
+            self._threads = []
+            self._startThreads()
+
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err))
 
@@ -448,18 +460,36 @@ class Controller:
             self.started = True
             self.start()
 
-    def parseInput(self, input):
-        for key in input:
-            if key == 'command':
-                try:
-                    if input[key]['address'] == self.address:
-                        self.runCmd(input[key])
-                    else:
-                        self.nodes[input[key]['address']].runCmd(input[key])
-                except KeyError as e:
-                    LOGGER.error('parseInput: {}'.format(e))
-            elif key == 'result':
-                self._handleResult(input[key])
+    def _startThreads(self):
+        for i in range(1):
+            t = Thread(target=self.parseInput)
+            t.daemon = True
+            t.start()
+            self._threads.append(t)
+
+    def parseInput(self):
+        while True:
+            input = self.poly.inQueue.get()
+            for key in input:
+                if key == 'command':
+                    try:
+                        if input[key]['address'] == self.address:
+                            self.runCmd(input[key])
+                        else:
+                            self.nodes[input[key]['address']].runCmd(input[key])
+                    except KeyError as e:
+                        LOGGER.error('parseInput: {}'.format(e))
+                elif key == 'result':
+                    self._handleResult(input[key])
+                elif key == 'shortPoll':
+                    self.shortPoll()
+                elif key == 'longPoll':
+                    self.longPoll()
+                elif key == 'query':
+                    self.query()
+                elif key == 'status':
+                    self.status()
+            self.poly.inQueue.task_done()
 
     def _handleResult(self, result):
         try:
@@ -481,6 +511,7 @@ class Controller:
     def start(self):
         pass
 
+    """
     def startPolls(self, long = 30, short = 10):
         Timer(long, self.longPoll, args = []).start()
         Timer(short, self.shortPoll, args = []).start()
@@ -490,6 +521,18 @@ class Controller:
 
     def shortPoll(self, timer = 10):
         self.poly._shortPoll = Timer(timer, self.shortPoll, args = [timer]).start()
+    """
+    def longPoll(self):
+        pass
+
+    def shortPoll(self):
+        pass
+
+    def query(self):
+        pass
+
+    def status(self):
+        pass
 
     def toJSON(self):
         LOGGER.debug(json.dumps(self.__dict__))
