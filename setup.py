@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='polyinterface',
-      version='1.1.1',
+      version='1.1.2',
       description='UDI Polyglot v2 Interface',
       url='https://github.com/Einstein42/udi-polyglot-interface',
       author='James Milne',
@@ -13,7 +13,7 @@ setup(name='polyinterface',
 	"paho-mqtt",
 	"python-dotenv",
         ],
-      python_requires='>2.7,!=3.0.*,!=3.1.*',
+      python_requires='>2.7,!=3.0.*,!=3.1.*,!=3.2.*',
       zip_safe=False,
           # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -29,7 +29,6 @@ setup(name='polyinterface',
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',

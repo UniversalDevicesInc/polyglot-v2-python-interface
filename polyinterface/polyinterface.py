@@ -76,7 +76,6 @@ if init:
     line = sys.stdin.readline()
     try:
         line = json.loads(line)
-        LOGGER.debug(line)
         os.environ['PROFILE_NUM'] = line['profileNum']
         os.environ['MQTT_HOST'] = line['mqttHost']
         os.environ['MQTT_PORT'] = line['mqttPort']
