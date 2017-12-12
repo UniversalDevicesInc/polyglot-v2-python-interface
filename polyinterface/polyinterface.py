@@ -83,7 +83,7 @@ if init:
         LOGGER.info('Received Config from STDIN.')
     except:
         e = sys.exc_info()[0]
-        LOGGER.debug('Invalid formatted input. Skipping. {}'.format(e))
+        LOGGER.error('Invalid formatted input. Skipping. {}'.format(e))
 
 class Interface(object):
     """
@@ -277,7 +277,7 @@ class Interface(object):
             return False
         try:
             message['node'] = self.profileNum
-            # LOGGER.debug(message)
+            #LOGGER.debug(message)
             self._mqttc.publish(self.topicInput, json.dumps(message), retain = False)
         except TypeError as err:
             LOGGER.error('MQTT Send Error: {}'.format(err))
@@ -336,8 +336,8 @@ class Interface(object):
         """
         self.config = config
         try:
-            for callback in self.__configObservers:
-                callback(config)
+            while self.__configObservers:
+                self.__configObservers.pop(0)(config)
         except KeyError as e:
             LOGGER.error('Could not find Nodes in Config')
 
@@ -465,11 +465,12 @@ class Controller(Node):
                 if node['address'] is not self.address:
                     n.polyConfig = node
                 n.isPrimary = node['isprimary']
-                n.timeAdded = node['time_added']
+                n.timeAdded = node['timeAdded']
                 n.enabled = node['enabled']
                 n.added = node['added']
         if not self.poly.getNode(self.address):
             self.addNode(self)
+            self.setDriver('ST', 1)
             LOGGER.info('Waiting on Primary node to be added.......')
         elif not self.started:
             self.nodes[self.address] = self
@@ -489,10 +490,7 @@ class Controller(Node):
             for key in input:
                 if key == 'command':
                     try:
-                        if input[key]['address'] == self.address:
-                            self.runCmd(input[key])
-                        else:
-                            self.nodes[input[key]['address']].runCmd(input[key])
+                        self.nodes[input[key]['address']].runCmd(input[key])
                     except KeyError as e:
                         LOGGER.error('parseInput: {}'.format(e))
                 elif key == 'result':
@@ -502,8 +500,6 @@ class Controller(Node):
                 elif key == 'longPoll':
                     self.longPoll()
                 elif key == 'query':
-                    LOGGER.debug(input[key]['address'][5:])
-                    LOGGER.debug(self.nodes)
                     if input[key]['address'][5:] in self.nodes:
                         self.nodes[input[key]['address'][5:]].query()
                     elif input[key]['address'] == 'all':
@@ -519,10 +515,8 @@ class Controller(Node):
         try:
             if 'addnode' in result:
                 if result['addnode']['success'] == True:
-                    if result['addnode']['address'] == self.address:
-                        self.start()
-                    else:
-                        self.nodes[result['addnode']['address']].start()
+                    self.nodes[result['addnode']['address']].start()
+                    self.nodes[result['addnode']['address']].reportDrivers()
                     self.nodesAdding.remove(result['addnode']['address'])
                 else:
                     del self.nodes[result['addnode']['address']]
@@ -568,8 +562,8 @@ class Controller(Node):
 
     id = 'controller'
     commands = {}
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 25},
-                {'driver': 'GV1', 'value': 0, 'uom': 25}]
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2},
+                {'driver': 'GV1', 'value': 0, 'uom': 2}]
 
 
 if __name__ == "__main__":
