@@ -1,4 +1,4 @@
-#!/bin/python3
+#!/usr/bin/env python
 """
 Python Interface for UDI Polyglot v2 NodeServers
 by Einstein.42 (James Milne) milne.james@gmail.com
@@ -13,7 +13,10 @@ import sys
 import select
 import os
 import ssl
-import queue
+try:
+    import queue
+except (ImportError):
+    import Queue as queue
 #import asyncio
 from os.path import join, expanduser
 from dotenv import load_dotenv
@@ -73,6 +76,7 @@ if init:
     line = sys.stdin.readline()
     try:
         line = json.loads(line)
+        LOGGER.debug(line)
         os.environ['PROFILE_NUM'] = line['profileNum']
         os.environ['MQTT_HOST'] = line['mqttHost']
         os.environ['MQTT_PORT'] = line['mqttPort']
@@ -82,7 +86,7 @@ if init:
         e = sys.exc_info()[0]
         LOGGER.debug('Invalid formatted input. Skipping. {}'.format(e))
 
-class Interface:
+class Interface(object):
     """
     Polyglot Interface Class
 
@@ -100,7 +104,8 @@ class Interface:
         self.connected = False
         self.profileNum = os.environ.get("PROFILE_NUM")
         if self.profileNum is None:
-            self.profileNum = os.environ.get(envVar)
+            if envVar is not None:
+                self.profileNum = os.environ.get(envVar)
         if self.profileNum is None:
             LOGGER.error('Profile Number not found in STDIN or .env file. Exiting.')
             sys.exit(1)
@@ -126,13 +131,13 @@ class Interface:
         self.inQueue = queue.Queue()
         #self.thread = Thread(target=self.start_loop)
         self.isyVersion = None
-        self._server = os.environ.get("MQTT_HOST") or '127.0.0.1'
+        self._server = os.environ.get("MQTT_HOST") or 'localhost'
         self._port = os.environ.get("MQTT_PORT") or '1883'
         self.polyglotConnected = False
         self.__configObservers = []
         Interface.__exists = True
 
-    def bind_toConfig(self, callback):
+    def onConfig(self, callback):
         """
         Gives the ability to bind any methods to be run when the config is received.
         """
@@ -180,7 +185,6 @@ class Interface:
         try:
             inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll']
             parsed_msg = json.loads(msg.payload.decode('utf-8'))
-            #LOGGER.debug(parsed_msg)
             if 'node' in parsed_msg:
                 if parsed_msg['node'] != 'polyglot': return
                 del parsed_msg['node']
@@ -233,18 +237,6 @@ class Interface:
         #LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
         pass
 
-    """
-    def start(self):
-        # Start the asyncio thread
-        self.thread.daemon = True
-        self.thread.start()
-
-    def start(self):
-        # Start the asyncio event loop
-        #self.loop.create_task(self._start())
-        self.loop.run_until_complete(self._start())
-    """
-
     def start(self):
         """
         The client start method. Starts the thread for the MQTT Client
@@ -253,7 +245,7 @@ class Interface:
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
         try:
             #self._mqttc.connect_async(str(self._server), int(self._port), 10)
-            self._mqttc.connect(str(self._server), int(self._port), 10)
+            self._mqttc.connect('{}'.format(self._server), int(self._port), 10)
             self._mqttc.loop_start()
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
@@ -303,10 +295,24 @@ class Interface:
                 'nodes': [{
                     'address': node.address,
                     'name': node.name,
-                    'node_def_id': node.node_def_id,
+                    'node_def_id': node.id,
                     'primary': node.primary,
                     'drivers': node.drivers
                 }]
+            }
+        }
+        self.send(message)
+
+    def delNode(self, address):
+        """
+        Delete a node from the NodeServer
+
+        :param node: Dictionary of node settings. Keys: address, name, node_def_id, primary, and drivers are required.
+        """
+        LOGGER.info('Removing node {}'.format(address))
+        message = {
+            'removenode': {
+                'address': address
             }
         }
         self.send(message)
@@ -339,7 +345,7 @@ class Interface:
     def input(self, command):
         self.inQueue.put(command)
 
-class Node:
+class Node(object):
     """
     Node Class for individual devices.
     """
@@ -358,17 +364,17 @@ class Node:
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err))
 
-    def setDriver(self, driver, value, report = True):
+    def setDriver(self, driver, value, report = True, force = False):
         for d in self.drivers:
             if d['driver'] == driver:
                 d['value'] = value
                 if report:
-                    self.reportDriver(d, report)
+                    self.reportDriver(d, report, force)
                 break
 
-    def reportDriver(self, driver, report):
+    def reportDriver(self, driver, report, force):
         for d in self._drivers:
-            if d['driver'] == driver['driver'] and d['value'] != driver['value']:
+            if d['driver'] == driver['driver'] and (d['value'] != driver['value'] or force):
                 LOGGER.info('Updating Driver {} - {}: {}'.format(self.address, driver['driver'], driver['value']))
                 d['value'] = deepcopy(driver['value'])
                 message = {
@@ -398,10 +404,19 @@ class Node:
     def updateDrivers(self, drivers):
         self._drivers = deepcopy(drivers)
 
+    def query(self):
+        self.reportDrivers()
+
+    def status(self):
+        self.reportDrivers()
+
     def runCmd(self, command):
-        if command['cmd'] in self._commands:
-            fun = self._commands[command['cmd']]
+        if command['cmd'] in self.commands:
+            fun = self.commands[command['cmd']]
             fun(self, command)
+
+    def start():
+        pass
 
     def toJSON(self):
         LOGGER.debug(json.dumps(self.__dict__))
@@ -409,37 +424,37 @@ class Node:
     def __rep__(self):
         return self.toJSON()
 
-    _commands = {}
-    node_def_id = ''
-    _sends = {}
-    _drivers = []
+    id = ''
+    commands = {}
+    drivers = []
+    sends = {}
 
-class Controller:
+class Controller(Node):
     """
-    Controller Class for controller management.
+    Controller Class for controller management. Superclass of Node
     """
     def __init__(self, poly):
         try:
+            self.parent = self
             self.poly = poly
-            self.poly.bind_toConfig(self._gotConfig)
-            self.name = None
-            self.address = None
+            self.poly.onConfig(self._gotConfig)
+            self.name = 'Controller'
+            self.address = 'controller'
+            self.primary = self.address
+            self._drivers = deepcopy(self.drivers)
             self.nodes = {}
-            self.polyNodes = None
             self.polyConfig = None
+            self.isPrimary = None
+            self.timeAdded = None
+            self.enabled = None
+            self.added = None
+            self.started = False
             self.nodesAdding = []
             self._threads = []
             self._startThreads()
 
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err))
-
-    def addNode(self, node):
-        if not self.poly.getNode(node.address):
-            self.nodesAdding.append(node.address)
-            self.poly.addNode(node)
-        else:
-            self.nodes[node.address].start()
 
     def _gotConfig(self, config):
         self.polyConfig = config
@@ -448,7 +463,8 @@ class Controller:
             if node['address'] in self.nodes:
                 n = self.nodes[node['address']]
                 n.updateDrivers(node['drivers'])
-                n.polyConfig = node
+                if node['address'] is not self.address:
+                    n.polyConfig = node
                 n.isPrimary = node['isprimary']
                 n.timeAdded = node['time_added']
                 n.enabled = node['enabled']
@@ -457,17 +473,18 @@ class Controller:
             self.addNode(self)
             LOGGER.info('Waiting on Primary node to be added.......')
         elif not self.started:
+            self.nodes[self.address] = self
             self.started = True
             self.start()
 
     def _startThreads(self):
         for i in range(1):
-            t = Thread(target=self.parseInput)
+            t = Thread(target=self._parseInput)
             t.daemon = True
             t.start()
             self._threads.append(t)
 
-    def parseInput(self):
+    def _parseInput(self):
         while True:
             input = self.poly.inQueue.get()
             for key in input:
@@ -486,9 +503,17 @@ class Controller:
                 elif key == 'longPoll':
                     self.longPoll()
                 elif key == 'query':
-                    self.query()
+                    LOGGER.debug(input[key]['address'][5:])
+                    LOGGER.debug(self.nodes)
+                    if input[key]['address'][5:] in self.nodes:
+                        self.nodes[input[key]['address'][5:]].query()
+                    elif input[key]['address'] == 'all':
+                        self.query()
                 elif key == 'status':
-                    self.status()
+                    if input[key]['address'][5:] in self.nodes:
+                        self.nodes[input[key]['address'][5:]].status()
+                    elif input[key]['address'] == 'all':
+                        self.status()
             self.poly.inQueue.task_done()
 
     def _handleResult(self, result):
@@ -500,28 +525,31 @@ class Controller:
                     else:
                         self.nodes[result['addnode']['address']].start()
                     self.nodesAdding.remove(result['addnode']['address'])
+                else:
+                    del self.nodes[result['addnode']['address']]
         except KeyError as e:
             LOGGER.error('handleResult: {}'.format(e))
 
-    def runCmd(self, command):
-        if command['cmd'] in self._commands:
-            fun = self._commands[command['cmd']]
-            fun(self, command)
+    def addNode(self, node):
+        if not self.poly.getNode(node.address):
+            if not node.address in self.nodes:
+                self.nodes[node.address] = node
+            self.nodesAdding.append(node.address)
+            self.poly.addNode(node)
+        else:
+            if not node.address in self.nodes:
+                self.nodes[node.address] = node
+            self.nodes[node.address].start()
 
-    def start(self):
-        pass
+    def delNode(self, address):
+        """
+        Just send it along if requested, should be able to delete the node even if it isn't
+        in our config anywhere. Usually used for normalization.
+        """
+        if address in self.nodes:
+            del self.nodes[address]
+        self.poly.delNode(address)
 
-    """
-    def startPolls(self, long = 30, short = 10):
-        Timer(long, self.longPoll, args = []).start()
-        Timer(short, self.shortPoll, args = []).start()
-
-    def longPoll(self, timer = 30):
-        self.poly._longPoll = Timer(timer, self.longPoll, args = [timer]).start()
-
-    def shortPoll(self, timer = 10):
-        self.poly._shortPoll = Timer(timer, self.shortPoll, args = [timer]).start()
-    """
     def longPoll(self):
         pass
 
@@ -529,13 +557,21 @@ class Controller:
         pass
 
     def query(self):
-        pass
+        for node in self.nodes:
+            self.nodes[node].reportDrivers()
 
     def status(self):
         pass
 
-    def toJSON(self):
-        LOGGER.debug(json.dumps(self.__dict__))
+    def runForever(self):
+        for thread in self._threads:
+            thread.join()
 
-    def __rep__(self):
-        return self.toJSON()
+    id = 'controller'
+    commands = {}
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 25},
+                {'driver': 'GV1', 'value': 0, 'uom': 25}]
+
+
+if __name__ == "__main__":
+    sys.exit(0)
