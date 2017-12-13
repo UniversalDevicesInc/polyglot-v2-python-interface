@@ -198,7 +198,7 @@ class Interface(object):
                     else:
                         LOGGER.error('Invalid command received in message from Polyglot: {}'.format(key))
 
-        except (ValueError, json.decoder.JSONDecodeError) as err:
+        except (ValueError) as err:
             LOGGER.error('MQTT Received Payload Error: {}'.format(err))
 
     def _disconnect(self, mqttc, userdata, rc):
@@ -475,6 +475,7 @@ class Controller(Node):
         elif not self.started:
             self.nodes[self.address] = self
             self.started = True
+            self.setDriver('ST', 1)
             self.start()
 
     def _startThreads(self):
@@ -515,6 +516,8 @@ class Controller(Node):
         try:
             if 'addnode' in result:
                 if result['addnode']['success'] == True:
+                    if result['addnode']['address'] == self.address:
+                        self.setDriver('ST', 1)
                     self.nodes[result['addnode']['address']].start()
                     self.nodes[result['addnode']['address']].reportDrivers()
                     self.nodesAdding.remove(result['addnode']['address'])
