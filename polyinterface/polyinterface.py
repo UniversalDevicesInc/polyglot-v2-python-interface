@@ -533,6 +533,7 @@ class Controller(Node):
             if not node.address in self.nodes:
                 self.nodes[node.address] = node
             self.nodes[node.address].start()
+            self.nodes[result['addnode']['address']].reportDrivers()
 
     def delNode(self, address):
         """
@@ -562,8 +563,7 @@ class Controller(Node):
 
     id = 'controller'
     commands = {}
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2},
-                {'driver': 'GV1', 'value': 0, 'uom': 2}]
+    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}]
 
 
 if __name__ == "__main__":
