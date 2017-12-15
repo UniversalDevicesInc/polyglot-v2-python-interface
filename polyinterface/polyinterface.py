@@ -536,7 +536,7 @@ class Controller(Node):
             if not node.address in self.nodes:
                 self.nodes[node.address] = node
             self.nodes[node.address].start()
-            self.nodes[result['addnode']['address']].reportDrivers()
+            self.nodes[node.address].reportDrivers()
 
     def delNode(self, address):
         """
