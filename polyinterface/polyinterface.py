@@ -182,8 +182,9 @@ class Interface(object):
         :param msg: Dictionary of MQTT received message. Uses: msg.topic, msg.qos, msg.payload
         """
         try:
-            inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll']
+            inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll', 'delete']
             parsed_msg = json.loads(msg.payload.decode('utf-8'))
+            #LOGGER.debug(parsed_msg)
             if 'node' in parsed_msg:
                 if parsed_msg['node'] != 'polyglot': return
                 del parsed_msg['node']
@@ -496,6 +497,8 @@ class Controller(Node):
                         LOGGER.error('parseInput: {}'.format(e))
                 elif key == 'result':
                     self._handleResult(input[key])
+                elif key == 'delete':
+                    self._delete()
                 elif key == 'shortPoll':
                     self.shortPoll()
                 elif key == 'longPoll':
@@ -525,6 +528,20 @@ class Controller(Node):
                     del self.nodes[result['addnode']['address']]
         except KeyError as e:
             LOGGER.error('handleResult: {}'.format(e))
+
+    def _delete(self):
+        """
+        Intermediate message that stops MQTT before sending to overrideable method for delete.
+        """
+        self.poly.stop()
+        self.delete()
+
+    def delete(self):
+        """
+        Incoming delete message from Polyglot. This NodeServer is being deleted.
+        You have 5 seconds before the process is killed. Cleanup and disconnect.
+        """
+        pass
 
     def addNode(self, node):
         if not self.poly.getNode(node.address):

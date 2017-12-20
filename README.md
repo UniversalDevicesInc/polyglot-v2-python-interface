@@ -10,7 +10,7 @@ Pip > 9 should be installed. This typically isn't the case, so you will have to 
 # Check your pip version
 pip -V
 pip 9.0.1 from /home/e42/.local/lib/python2.7/site-packages (python 2.7)
-pip -V
+pip3 -V
 pip 9.0.1 from /usr/lib/python3/dist-packages (python 3.5)
 
 # If Pip is < Version 9
