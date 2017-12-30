@@ -303,6 +303,11 @@ class Interface(object):
         }
         self.send(message)
 
+    def installprofile(self):
+        LOGGER.info('Sending Install Profile command to Polyglot.')
+        message = { 'installprofile': { 'reboot': False } }
+        self.send(message)
+
     def delNode(self, address):
         """
         Delete a node from the NodeServer
@@ -340,7 +345,7 @@ class Interface(object):
             while self.__configObservers:
                 self.__configObservers.pop(0)(config)
         except KeyError as e:
-            LOGGER.error('Could not find Nodes in Config')
+            LOGGER.error('KeyError in gotConfig: {}'.format(e))
 
     def input(self, command):
         self.inQueue.put(command)
@@ -471,12 +476,10 @@ class Controller(Node):
                 n.added = node['added']
         if not self.poly.getNode(self.address):
             self.addNode(self)
-            self.setDriver('ST', 1)
             LOGGER.info('Waiting on Primary node to be added.......')
         elif not self.started:
             self.nodes[self.address] = self
             self.started = True
-            self.setDriver('ST', 1)
             self.start()
 
     def _startThreads(self):
@@ -519,14 +522,12 @@ class Controller(Node):
         try:
             if 'addnode' in result:
                 if result['addnode']['success'] == True:
-                    if result['addnode']['address'] == self.address:
-                        self.setDriver('ST', 1)
                     self.nodes[result['addnode']['address']].start()
                     self.nodes[result['addnode']['address']].reportDrivers()
                     self.nodesAdding.remove(result['addnode']['address'])
                 else:
                     del self.nodes[result['addnode']['address']]
-        except KeyError as e:
+        except (KeyError, ValueError) as e:
             LOGGER.error('handleResult: {}'.format(e))
 
     def _delete(self):
@@ -544,16 +545,9 @@ class Controller(Node):
         pass
 
     def addNode(self, node):
-        if not self.poly.getNode(node.address):
-            if not node.address in self.nodes:
-                self.nodes[node.address] = node
-            self.nodesAdding.append(node.address)
-            self.poly.addNode(node)
-        else:
-            if not node.address in self.nodes:
-                self.nodes[node.address] = node
-            self.nodes[node.address].start()
-            self.nodes[node.address].reportDrivers()
+        self.nodes[node.address] = node
+        self.nodesAdding.append(node.address)
+        self.poly.addNode(node)
 
     def delNode(self, address):
         """
