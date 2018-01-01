@@ -354,9 +354,10 @@ class Node(object):
     """
     Node Class for individual devices.
     """
-    def __init__(self, parent, primary, address, name):
+    def __init__(self, controller, primary, address, name):
         try:
-            self.parent = parent
+            self.controller = controller
+            self.parent = self.controller
             self.primary = primary
             self.address = address
             self.name = name
@@ -390,7 +391,7 @@ class Node(object):
                         'uom': driver['uom']
                     }
                 }
-                self.parent.poly.send(message)
+                self.controller.poly.send(message)
                 break
 
     def reportDrivers(self):
@@ -404,7 +405,7 @@ class Node(object):
                     'uom': driver['uom']
                 }
             }
-            self.parent.poly.send(message)
+            self.controller.poly.send(message)
 
     def updateDrivers(self, drivers):
         self._drivers = deepcopy(drivers)
@@ -440,7 +441,8 @@ class Controller(Node):
     """
     def __init__(self, poly):
         try:
-            self.parent = self
+            self.controller = self
+            self.parent = self.controller
             self.poly = poly
             self.poly.onConfig(self._gotConfig)
             self.name = 'Controller'
