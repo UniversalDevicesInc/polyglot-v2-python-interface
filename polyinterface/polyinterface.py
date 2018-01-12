@@ -303,6 +303,16 @@ class Interface(object):
         }
         self.send(message)
 
+    def restart(self):
+        """
+        Send a command to Polyglot to restart this NodeServer
+        """
+        LOGGER.info('Asking Polyglot to restart me.')
+        message = {
+            'restart': {}
+        }
+        self.send(message)
+
     def installprofile(self):
         LOGGER.info('Sending Install Profile command to Polyglot.')
         message = { 'installprofile': { 'reboot': False } }
@@ -396,6 +406,7 @@ class Node(object):
 
     def reportDrivers(self):
         LOGGER.info('Updating All Drivers to ISY for {}({})'.format(self.name, self.address))
+        self.updateDrivers(self.drivers)
         for driver in self.drivers:
             message = {
                 'status': {
@@ -450,7 +461,7 @@ class Controller(Node):
             self.primary = self.address
             self._drivers = deepcopy(self.drivers)
             self.nodes = {}
-            self.polyConfig = None
+            self.polyConfig = self.poly.config
             self.isPrimary = None
             self.timeAdded = None
             self.enabled = None
@@ -464,7 +475,7 @@ class Controller(Node):
             LOGGER.error('Error Creating node: {}'.format(err))
 
     def _gotConfig(self, config):
-        self.polyConfig = config
+        self.polyConfig = self.poly.config
         self.poly.isyVersion = config['isyVersion']
         for node in config['nodes']:
             if node['address'] in self.nodes:
@@ -478,7 +489,7 @@ class Controller(Node):
                 n.added = node['added']
         if not self.poly.getNode(self.address):
             self.addNode(self)
-            LOGGER.info('Waiting on Primary node to be added.......')
+            LOGGER.info('Waiting on Controller node to be added.......')
         elif not self.started:
             self.nodes[self.address] = self
             self.started = True
@@ -499,7 +510,7 @@ class Controller(Node):
                     try:
                         self.nodes[input[key]['address']].runCmd(input[key])
                     except KeyError as e:
-                        LOGGER.error('parseInput: {}'.format(e))
+                        LOGGER.error('parseInput: {} on {}'.format(e, input))
                 elif key == 'result':
                     self._handleResult(input[key])
                 elif key == 'delete':
