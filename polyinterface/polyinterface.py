@@ -71,6 +71,13 @@ except (UserWarning) as e:
     # sys.exit(1)
 warnings.resetwarnings()
 
+"""
+If this NodeServer is co-resident with Polyglot it will receive a STDIN config on startup
+that looks like:
+{"token":"2cb40e507253fc8f4cbbe247089b28db79d859cbed700ec151",
+"mqttHost":"localhost","mqttPort":"1883","profileNum":"10"}
+"""
+
 init = select.select([sys.stdin], [], [], 1)[0]
 if init:
     line = sys.stdin.readline()
@@ -184,7 +191,6 @@ class Interface(object):
         try:
             inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll', 'delete']
             parsed_msg = json.loads(msg.payload.decode('utf-8'))
-            #LOGGER.debug(parsed_msg)
             if 'node' in parsed_msg:
                 if parsed_msg['node'] != 'polyglot': return
                 del parsed_msg['node']
@@ -278,7 +284,6 @@ class Interface(object):
             return False
         try:
             message['node'] = self.profileNum
-            #LOGGER.debug(message)
             self._mqttc.publish(self.topicInput, json.dumps(message), retain = False)
         except TypeError as err:
             LOGGER.error('MQTT Send Error: {}'.format(err))
@@ -301,6 +306,16 @@ class Interface(object):
                 }]
             }
         }
+        self.send(message)
+
+    def saveCustomData(self, data):
+        """
+        Send custom dictionary to Polyglot to save and be retrieved on startup.
+
+        :param data: Dictionary of key value pairs to store in Polyglot database.
+        """
+        LOGGER.info('Sending custom data to Polyglot.')
+        message = { 'customdata': data }
         self.send(message)
 
     def restart(self):
@@ -351,9 +366,10 @@ class Interface(object):
         that are waiting on the config to be received.
         """
         self.config = config
+        self.isyVersion = config['isyVersion']
         try:
-            while self.__configObservers:
-                self.__configObservers.pop(0)(config)
+            for watcher in self.__configObservers:
+                watcher(config)
         except KeyError as e:
             LOGGER.error('KeyError in gotConfig: {}'.format(e))
 
@@ -432,8 +448,13 @@ class Node(object):
             fun = self.commands[command['cmd']]
             fun(self, command)
 
-    def start():
+    def start(self):
         pass
+
+    def getDriver(self, dv):
+        for driver in self._drivers:
+            if driver['driver'] == dv:
+                return driver['value']
 
     def toJSON(self):
         LOGGER.debug(json.dumps(self.__dict__))
@@ -450,7 +471,12 @@ class Controller(Node):
     """
     Controller Class for controller management. Superclass of Node
     """
+    __exists = False
+
     def __init__(self, poly):
+        if self.__exists:
+            warnings.warn('Only one Controller is allowed.')
+            return
         try:
             self.controller = self
             self.parent = self.controller
@@ -460,8 +486,10 @@ class Controller(Node):
             self.address = 'controller'
             self.primary = self.address
             self._drivers = deepcopy(self.drivers)
-            self.nodes = {}
-            self.polyConfig = self.poly.config
+            self._nodes = {}
+            self.config = None
+            self.nodes = { self.address: self }
+            self.polyConfig = poly.config
             self.isPrimary = None
             self.timeAdded = None
             self.enabled = None
@@ -475,22 +503,21 @@ class Controller(Node):
             LOGGER.error('Error Creating node: {}'.format(err))
 
     def _gotConfig(self, config):
-        self.polyConfig = self.poly.config
-        self.poly.isyVersion = config['isyVersion']
+        self.polyConfig = config
         for node in config['nodes']:
+            self._nodes[node['address']] = node
             if node['address'] in self.nodes:
                 n = self.nodes[node['address']]
                 n.updateDrivers(node['drivers'])
-                if node['address'] is not self.address:
-                    n.polyConfig = node
+                n.config = node
                 n.isPrimary = node['isprimary']
                 n.timeAdded = node['timeAdded']
                 n.enabled = node['enabled']
                 n.added = node['added']
-        if not self.poly.getNode(self.address):
+        if not self.address in self._nodes:
             self.addNode(self)
             LOGGER.info('Waiting on Controller node to be added.......')
-        elif not self.started:
+        if not self.started:
             self.nodes[self.address] = self
             self.started = True
             self.start()
@@ -520,13 +547,13 @@ class Controller(Node):
                 elif key == 'longPoll':
                     self.longPoll()
                 elif key == 'query':
-                    if input[key]['address'][5:] in self.nodes:
-                        self.nodes[input[key]['address'][5:]].query()
+                    if input[key]['address'] in self.nodes:
+                        self.nodes[input[key]['address']].query()
                     elif input[key]['address'] == 'all':
                         self.query()
                 elif key == 'status':
-                    if input[key]['address'][5:] in self.nodes:
-                        self.nodes[input[key]['address'][5:]].status()
+                    if input[key]['address'] in self.nodes:
+                        self.nodes[input[key]['address']].status()
                     elif input[key]['address'] == 'all':
                         self.status()
             self.poly.inQueue.task_done()
@@ -535,7 +562,8 @@ class Controller(Node):
         try:
             if 'addnode' in result:
                 if result['addnode']['success'] == True:
-                    self.nodes[result['addnode']['address']].start()
+                    if not result['addnode']['address'] == self.address:
+                        self.nodes[result['addnode']['address']].start()
                     self.nodes[result['addnode']['address']].reportDrivers()
                     self.nodesAdding.remove(result['addnode']['address'])
                 else:
@@ -557,7 +585,20 @@ class Controller(Node):
         """
         pass
 
-    def addNode(self, node):
+    """
+    AddNode adds the class to self.nodes then sends the request to Polyglot
+    If update is True, overwrite the node in Polyglot
+    """
+    def addNode(self, node, update = False):
+        self.nodes[node.address] = node
+        if node.address not in self._nodes or update:
+            self.nodesAdding.append(node.address)
+            self.poly.addNode(node)
+
+    """
+    Same as AddNode update = True
+    """
+    def updateNode(self, node):
         self.nodes[node.address] = node
         self.nodesAdding.append(node.address)
         self.poly.addNode(node)
@@ -582,11 +623,22 @@ class Controller(Node):
             self.nodes[node].reportDrivers()
 
     def status(self):
-        pass
+        for node in self.nodes:
+            self.nodes[node].reportDrivers()
 
     def runForever(self):
         for thread in self._threads:
             thread.join()
+
+    def start(self):
+        pass
+
+    def saveCustomData(self, data):
+        if not isinstance(data, dict):
+            LOGGER.error('saveCustomData: data isn\'t a dictionary. Ignoring.')
+        else:
+            self.poly.saveCustomData(data)
+
 
     id = 'controller'
     commands = {}
