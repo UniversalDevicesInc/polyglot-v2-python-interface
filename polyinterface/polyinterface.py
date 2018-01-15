@@ -388,7 +388,7 @@ class Node(object):
             self.address = address
             self.name = name
             self.polyConfig = None
-            #self._drivers = {deepcopy(self.drivers)}
+            self._drivers = {deepcopy(self.drivers)}
             self.isPrimary = None
             self.timeAdded = None
             self.enabled = None
