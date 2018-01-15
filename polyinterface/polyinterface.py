@@ -388,7 +388,7 @@ class Node(object):
             self.address = address
             self.name = name
             self.polyConfig = None
-            self._drivers = deepcopy(self.drivers)
+            #self._drivers = {deepcopy(self.drivers)}
             self.isPrimary = None
             self.timeAdded = None
             self.enabled = None
@@ -406,14 +406,14 @@ class Node(object):
 
     def reportDriver(self, driver, report, force):
         for d in self._drivers:
-            if d['driver'] == driver['driver'] and (d['value'] != driver['value'] or force):
+            if d['driver'] == driver['driver'] and (d['value'] != str(driver['value']) or force):
                 LOGGER.info('Updating Driver {} - {}: {}'.format(self.address, driver['driver'], driver['value']))
                 d['value'] = deepcopy(driver['value'])
                 message = {
                     'status': {
                         'address': self.address,
                         'driver': driver['driver'],
-                        'value': driver['value'],
+                        'value': str(driver['value']),
                         'uom': driver['uom']
                     }
                 }

@@ -1,5 +1,11 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.9
+* setDriver testing fix to prevent un-needed updates
+* receive config on every successful driver change
+* controller.\_nodes and node.\_drivers are real-time updated
+* added node.config with real-time polyglot config for that node
+
 ### Version 2.0.8
 * Fixed Address received in query (Use Polyglot 2.0.34+)
 * Fixed incoming node checks
