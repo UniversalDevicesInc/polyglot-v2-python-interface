@@ -594,6 +594,8 @@ class Controller(Node):
         if node.address not in self._nodes or update:
             self.nodesAdding.append(node.address)
             self.poly.addNode(node)
+        else:
+            self.nodes[node.address].start()
 
     """
     Same as AddNode update = True
