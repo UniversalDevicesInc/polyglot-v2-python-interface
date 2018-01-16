@@ -600,6 +600,7 @@ class Controller(Node):
             self.poly.addNode(node)
         else:
             self.nodes[node.address].start()
+        return node
 
     """
     Same as AddNode update = True
