@@ -390,6 +390,7 @@ class Node(object):
             self.polyConfig = None
             self._drivers = deepcopy(self.drivers)
             self.isPrimary = None
+            self.config = None
             self.timeAdded = None
             self.enabled = None
             self.added = None
@@ -452,9 +453,9 @@ class Node(object):
         pass
 
     def getDriver(self, dv):
-        for driver in self._drivers:
-            if driver['driver'] == dv:
-                return driver['value']
+        node = filter(lambda x: x['address'] == self.address, self.controller.poly.config['nodes'])[0]
+        driver = filter(lambda y: y['driver'] == 'ST', node['drivers'])[0]
+        return driver['value']
 
     def toJSON(self):
         LOGGER.debug(json.dumps(self.__dict__))
@@ -489,7 +490,7 @@ class Controller(Node):
             self._nodes = {}
             self.config = None
             self.nodes = { self.address: self }
-            self.polyConfig = poly.config
+            self.polyConfig = None
             self.isPrimary = None
             self.timeAdded = None
             self.enabled = None
