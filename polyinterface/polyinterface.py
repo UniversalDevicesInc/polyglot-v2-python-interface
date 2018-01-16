@@ -453,9 +453,12 @@ class Node(object):
         pass
 
     def getDriver(self, dv):
-        node = filter(lambda x: x['address'] == self.address, self.controller.poly.config['nodes'])[0]
-        driver = filter(lambda y: y['driver'] == 'ST', node['drivers'])[0]
-        return driver['value']
+        for index, node in enumerate(self.controller.poly.config['nodes']):
+            if node['address'] == self.address:
+                for index, driver in enumerate(node['drivers']):
+                    if driver['driver'] == dv:
+                        return driver['value']
+        return None
 
     def toJSON(self):
         LOGGER.debug(json.dumps(self.__dict__))
