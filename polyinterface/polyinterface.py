@@ -28,6 +28,25 @@ from copy import deepcopy
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
 
+class LoggerWriter(object):
+    def __init__(self, level):
+        # self.level is really like using log.debug(message)
+        # at least in my case
+        self.level = level
+
+    def write(self, message):
+        # if statement reduces the amount of newlines that are
+        # printed to the logger
+        if message != '\n':
+            self.level(message)
+
+    def flush(self):
+        # create a flush method so things can be flushed when
+        # the system wants to. Not sure if simply 'printing'
+        # sys.stderr is the correct way to do it, but it seemed
+        # to work properly for me.
+        self.level(sys.stderr)
+
 def setup_log():
    # Log Location
    #path = os.path.dirname(sys.argv[0])
@@ -56,6 +75,7 @@ def setup_log():
    return logger
 
 LOGGER = setup_log()
+sys.stderr = LoggerWriter(LOGGER.error)
 
 LOGGER.info('Polyglot v2 Interface Starting...')
 """
@@ -66,7 +86,7 @@ then it should already exist. If not create it.
 warnings.simplefilter('error', UserWarning)
 try:
     load_dotenv(join(expanduser("~") + '/.polyglot/.env'))
-except (UserWarning) as e:
+except (UserWarning) as err:
     LOGGER.warning('File does not exist: {}.'.format(join(expanduser("~") + '/.polyglot/.env')))
     # sys.exit(1)
 warnings.resetwarnings()
@@ -88,9 +108,9 @@ if init:
         os.environ['MQTT_PORT'] = line['mqttPort']
         os.environ['TOKEN'] = line['token']
         LOGGER.info('Received Config from STDIN.')
-    except:
-        e = sys.exc_info()[0]
-        LOGGER.error('Invalid formatted input. Skipping. {}'.format(e))
+    except (Exception) as err:
+        #e = sys.exc_info()[0]
+        LOGGER.error('Invalid formatted input. Skipping. {}'.format(err), exc_info=True)
 
 class Interface(object):
     """
@@ -141,6 +161,7 @@ class Interface(object):
         self._port = os.environ.get("MQTT_PORT") or '1883'
         self.polyglotConnected = False
         self.__configObservers = []
+        self.__stopObservers = []
         Interface.__exists = True
 
     def onConfig(self, callback):
@@ -148,6 +169,12 @@ class Interface(object):
         Gives the ability to bind any methods to be run when the config is received.
         """
         self.__configObservers.append(callback)
+
+    def onStop(self, callback):
+        """
+        Gives the ability to bind any methods to be run when the stop command is received.
+        """
+        self.__stopObservers.append(callback)
 
     def _connect(self, mqttc, userdata, flags, rc):
         """
@@ -206,7 +233,7 @@ class Interface(object):
                         LOGGER.error('Invalid command received in message from Polyglot: {}'.format(key))
 
         except (ValueError) as err:
-            LOGGER.error('MQTT Received Payload Error: {}'.format(err))
+            LOGGER.error('MQTT Received Payload Error: {}'.format(err), exc_info=True)
 
     def _disconnect(self, mqttc, userdata, rc):
         """
@@ -273,6 +300,11 @@ class Interface(object):
             self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain = True)
             self._mqttc.loop_stop()
             self._mqttc.disconnect()
+        try:
+            for watcher in self.__stopObservers:
+                watcher()
+        except KeyError as e:
+            LOGGER.error('KeyError in gotConfig: {}'.format(e))
 
     def send(self, message):
         """
@@ -395,7 +427,7 @@ class Node(object):
             self.enabled = None
             self.added = None
         except (KeyError) as err:
-            LOGGER.error('Error Creating node: {}'.format(err))
+            LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
 
     def setDriver(self, driver, value, report = True, force = False):
         for d in self.drivers:
@@ -486,6 +518,7 @@ class Controller(Node):
             self.parent = self.controller
             self.poly = poly
             self.poly.onConfig(self._gotConfig)
+            self.poly.onStop(self.stop)
             self.name = 'Controller'
             self.address = 'controller'
             self.primary = self.address
@@ -504,7 +537,7 @@ class Controller(Node):
             self._startThreads()
 
         except (KeyError) as err:
-            LOGGER.error('Error Creating node: {}'.format(err))
+            LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
 
     def _gotConfig(self, config):
         self.polyConfig = config
@@ -572,8 +605,8 @@ class Controller(Node):
                     self.nodesAdding.remove(result['addnode']['address'])
                 else:
                     del self.nodes[result['addnode']['address']]
-        except (KeyError, ValueError) as e:
-            LOGGER.error('handleResult: {}'.format(e))
+        except (KeyError, ValueError) as err:
+            LOGGER.error('handleResult: {}'.format(err), exc_info=True)
 
     def _delete(self):
         """
@@ -646,6 +679,9 @@ class Controller(Node):
         else:
             self.poly.saveCustomData(data)
 
+    def stop(self):
+        """ Called on nodeserver stop """
+        pass
 
     id = 'controller'
     commands = {}
