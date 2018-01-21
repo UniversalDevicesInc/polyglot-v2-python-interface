@@ -75,6 +75,7 @@ def setup_log():
    return logger
 
 LOGGER = setup_log()
+sys.stdout = LoggerWriter(LOGGER.debug)
 sys.stderr = LoggerWriter(LOGGER.error)
 
 LOGGER.info('Polyglot v2 Interface Starting...')
