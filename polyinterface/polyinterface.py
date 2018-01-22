@@ -88,7 +88,7 @@ warnings.simplefilter('error', UserWarning)
 try:
     load_dotenv(join(expanduser("~") + '/.polyglot/.env'))
 except (UserWarning) as err:
-    LOGGER.warning('File does not exist: {}.'.format(join(expanduser("~") + '/.polyglot/.env')))
+    LOGGER.warning('File does not exist: {}.'.format(join(expanduser("~") + '/.polyglot/.env')), exc_info=True)
     # sys.exit(1)
 warnings.resetwarnings()
 
@@ -229,7 +229,7 @@ class Interface(object):
                     elif key == 'connected':
                         self.polyglotConnected = parsed_msg[key]
                     elif key == 'stop':
-                        LOGGER.debug('Got Stop')
+                        LOGGER.debug('Received stop from Polyglot... Shutting Down.')
                         self.stop()
                     elif key in inputCmds:
                         self.input(parsed_msg)
@@ -308,7 +308,7 @@ class Interface(object):
             for watcher in self.__stopObservers:
                 watcher()
         except KeyError as e:
-            LOGGER.error('KeyError in gotConfig: {}'.format(e))
+            LOGGER.exception('KeyError in gotConfig: {}'.format(e), exc_info=True)
 
     def send(self, message):
         """
@@ -322,7 +322,7 @@ class Interface(object):
             message['node'] = self.profileNum
             self._mqttc.publish(self.topicInput, json.dumps(message), retain = False)
         except TypeError as err:
-            LOGGER.error('MQTT Send Error: {}'.format(err))
+            LOGGER.error('MQTT Send Error: {}'.format(err), exc_info=True)
 
     def addNode(self, node):
         """
@@ -384,7 +384,6 @@ class Interface(object):
         message = { 'removenotice': data }
         self.send(message)
 
-
     def restart(self):
         """
         Send a command to Polyglot to restart this NodeServer
@@ -424,7 +423,7 @@ class Interface(object):
                     return node
             return False
         except KeyError as e:
-            LOGGER.error('Usually means we have not received the config yet.')
+            LOGGER.error('Usually means we have not received the config yet.', exc_info=True)
             return False
 
     def inConfig(self, config):
@@ -438,7 +437,7 @@ class Interface(object):
             for watcher in self.__configObservers:
                 watcher(config)
         except KeyError as e:
-            LOGGER.error('KeyError in gotConfig: {}'.format(e))
+            LOGGER.error('KeyError in gotConfig: {}'.format(e), exc_info=True)
 
     def input(self, command):
         self.inQueue.put(command)
@@ -570,7 +569,6 @@ class Controller(Node):
             self.nodesAdding = []
             self._threads = []
             self._startThreads()
-
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
 
@@ -606,10 +604,7 @@ class Controller(Node):
             input = self.poly.inQueue.get()
             for key in input:
                 if key == 'command':
-                    try:
-                        self.nodes[input[key]['address']].runCmd(input[key])
-                    except KeyError as e:
-                        LOGGER.error('parseInput: {} on {}'.format(e, input))
+                    self.nodes[input[key]['address']].runCmd(input[key])
                 elif key == 'result':
                     self._handleResult(input[key])
                 elif key == 'delete':
@@ -735,7 +730,7 @@ class Controller(Node):
                 newData.pop(data)
                 self.poly.saveCustomParams(newData)
             except (KeyError) as err:
-                LOGGER.error('{} not found in customParams. Ignoring...'.format(data))
+                LOGGER.error('{} not found in customParams. Ignoring...'.format(data), exc_info=True)
 
     def getCustomParam(self, data):
         params = deepcopy(self.poly.config['customParams'])
@@ -759,7 +754,7 @@ class Controller(Node):
                 self.poly.config['notices'][data]
                 self.poly.removeNotice(data)
             except (IndexError) as err:
-                LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err))
+                LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err), exc_info=True)
 
     def getNotices(self):
         return self.poly.config['notices']
