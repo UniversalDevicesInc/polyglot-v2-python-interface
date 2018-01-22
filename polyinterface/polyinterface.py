@@ -228,6 +228,9 @@ class Interface(object):
                         self.inConfig(parsed_msg[key])
                     elif key == 'connected':
                         self.polyglotConnected = parsed_msg[key]
+                    elif key == 'stop':
+                        LOGGER.debug('Got Stop')
+                        self.stop()
                     elif key in inputCmds:
                         self.input(parsed_msg)
                     else:
@@ -347,9 +350,40 @@ class Interface(object):
 
         :param data: Dictionary of key value pairs to store in Polyglot database.
         """
-        LOGGER.info('Sending custom data to Polyglot.')
+        LOGGER.info('Sending customData to Polyglot.')
         message = { 'customdata': data }
         self.send(message)
+
+    def saveCustomParams(self, data):
+        """
+        Send custom dictionary to Polyglot to save and be retrieved on startup.
+
+        :param data: Dictionary of key value pairs to store in Polyglot database.
+        """
+        LOGGER.info('Sending customParams to Polyglot.')
+        message = { 'customparams': data }
+        self.send(message)
+
+    def addNotice(self, data):
+        """
+        Add custom notice to front-end for this NodeServers
+
+        :param data: String of characters to add as a notification in the front-end.
+        """
+        LOGGER.info('Sending addnotice to Polyglot: {}'.format(data))
+        message = { 'addnotice': data }
+        self.send(message)
+
+    def removeNotice(self, data):
+        """
+        Add custom notice to front-end for this NodeServers
+
+        :param data: Index of notices list to remove.
+        """
+        LOGGER.info('Sending removenotice to Polyglot for index {}'.format(data))
+        message = { 'removenotice': data }
+        self.send(message)
+
 
     def restart(self):
         """
@@ -679,6 +713,49 @@ class Controller(Node):
             LOGGER.error('saveCustomData: data isn\'t a dictionary. Ignoring.')
         else:
             self.poly.saveCustomData(data)
+
+    def addCustomParam(self, data):
+        if not isinstance(data, dict):
+            LOGGER.error('addCustomParam: data isn\'t a dictionary. Ignoring.')
+        else:
+            newData = deepcopy(self.poly.config['customParams'])
+            newData.update(data)
+            self.poly.saveCustomParams(newData)
+
+    def removeCustomParam(self, data):
+        try: # check whether python knows about 'basestring'
+           basestring
+        except NameError: # no, it doesn't (it's Python3); use 'str' instead
+           basestring=str
+        if not isinstance(data, basestring):
+            LOGGER.error('removeCustomParam: data isn\'t a string. Ignoring.')
+        else:
+            try:
+                newData = deepcopy(self.poly.config['customParams'])
+                newData.pop(data)
+                self.poly.saveCustomParams(newData)
+            except (KeyError) as err:
+                LOGGER.error('{} not found in customParams. Ignoring...'.format(data))
+
+    def addNotice(self, data):
+        try: # check whether python knows about 'basestring'
+           basestring
+        except NameError: # no, it doesn't (it's Python3); use 'str' instead
+           basestring=str
+        if not isinstance(data, basestring):
+            LOGGER.error('addNotice: data isn\'t a string. Ignoring.')
+        else:
+            self.poly.addNotice(data)
+
+    def removeNotice(self, data):
+        if not isinstance(data, int):
+            LOGGER.error('removeNotice: data isn\'t a int. Ignoring.')
+        else:
+            try:
+                self.poly.config['notices'][data]
+                self.poly.removeNotice(data)
+            except (IndexError) as err:
+                LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err))
 
     def stop(self):
         """ Called on nodeserver stop """
