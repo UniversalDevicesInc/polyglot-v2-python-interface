@@ -764,6 +764,11 @@ class Controller(Node):
     def getNotices(self):
         return self.poly.config['notices']
 
+    def removeNoticesAll(self):
+        if len(self.poly.config['notices']):
+            for i in range(len(self.poly.config['notices'])):
+                self.removeNotice(i)
+
     def stop(self):
         """ Called on nodeserver stop """
         pass
