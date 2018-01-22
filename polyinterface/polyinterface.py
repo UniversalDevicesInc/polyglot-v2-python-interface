@@ -737,6 +737,10 @@ class Controller(Node):
             except (KeyError) as err:
                 LOGGER.error('{} not found in customParams. Ignoring...'.format(data))
 
+    def getCustomParam(self, data):
+        params = deepcopy(self.poly.config['customParams'])
+        return params.get(data)
+
     def addNotice(self, data):
         try: # check whether python knows about 'basestring'
            basestring
@@ -756,6 +760,9 @@ class Controller(Node):
                 self.poly.removeNotice(data)
             except (IndexError) as err:
                 LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err))
+
+    def getNotices(self):
+        return self.poly.config['notices']
 
     def stop(self):
         """ Called on nodeserver stop """
