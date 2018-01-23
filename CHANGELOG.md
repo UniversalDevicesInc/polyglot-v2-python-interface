@@ -1,5 +1,8 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.18
+* ST connection set from polyinterface
+
 ### Version 2.0.9
 * setDriver testing fix to prevent un-needed updates
 * receive config on every successful driver change
