@@ -590,6 +590,7 @@ class Controller(Node):
         if not self.started:
             self.nodes[self.address] = self
             self.started = True
+            self.setDriver('ST', 1, True, True)
             self.start()
 
     def _startThreads(self):
