@@ -4,7 +4,7 @@ from setuptools import find_packages
 setup(name='polyinterface',
       version='2.0.19',
       description='UDI Polyglot v2 Interface',
-      url='https://github.com/Einstein42/udi-polyglot-interface',
+      url='https://github.com/UniversalDevicesInc/polyglot-v2-python-interface',
       author='James Milne',
       author_email='milne.james@gmail.com',
       license='MIT',
