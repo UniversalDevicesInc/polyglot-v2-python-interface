@@ -23,8 +23,7 @@ except (ImportError):
 from os.path import join, expanduser
 from dotenv import load_dotenv
 import paho.mqtt.client as mqtt
-from threading import Thread, Timer
-import multiprocessing
+from threading import Thread
 from copy import deepcopy
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
