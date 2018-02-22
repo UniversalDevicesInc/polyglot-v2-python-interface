@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='polyinterface',
-      version='2.0.20',
+      version='2.0.21',
       description='UDI Polyglot v2 Interface',
       url='https://github.com/UniversalDevicesInc/polyglot-v2-python-interface',
       author='James Milne',
