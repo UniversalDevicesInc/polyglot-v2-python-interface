@@ -481,6 +481,18 @@ class Node(object):
                 self.controller.poly.send(message)
                 break
 
+    def reportCmd(self, command, value=None, uom=None):
+        message = {
+            'command': {
+                'address': self.address,
+                'command': command
+            }
+        }
+        if value is not None and uom is not None:
+            message['command']['value'] = str(value)
+            message['command']['uom'] = uom
+        self.controller.poly.send(message)
+
     def reportDrivers(self):
         LOGGER.info('Updating All Drivers to ISY for {}({})'.format(self.name, self.address))
         self.updateDrivers(self.drivers)
