@@ -133,7 +133,7 @@ class Interface(object):
         self.topicPolyglotConnection = 'udi/polyglot/connections/polyglot'
         self.topicInput = 'udi/polyglot/ns/{}'.format(self.profileNum)
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
-        self._mqttc = mqtt.Client(envVar, True)
+        self._mqttc = mqtt.Client(envVar)
         self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
         self._mqttc.on_message = self._message
@@ -141,9 +141,13 @@ class Interface(object):
         self._mqttc.on_disconnect = self._disconnect
         self._mqttc.on_publish = self._publish
         self._mqttc.on_log = self._log
-        self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
-               join(expanduser("~") + '/.polyglot/ssl/client.crt'),
-               join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
+        self.useSecure = True
+        if 'USE_HTTPS' in os.environ:
+            self.useSecure = os.environ['USE_HTTPS']
+        if self.useSecure is True:
+            self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
+                join(expanduser("~") + '/.polyglot/ssl/client.crt'),
+                join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
         #self._mqttc.tls_insecure_set(True)
         self.config = None
         #self.loop = asyncio.new_event_loop()
@@ -275,12 +279,12 @@ class Interface(object):
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
         try:
             #self._mqttc.connect_async(str(self._server), int(self._port), 10)
-            self._mqttc.connect('{}'.format(self._server), int(self._port), 10)
+            self._mqttc.connect('{}'.format(self._server), int(self._port), 120)
             self._mqttc.loop_start()
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
-            LOGGER.error("MQTT Connection error: {}".format(message))
+            LOGGER.error("MQTT Connection error: {}".format(message), exc_info=True)
 
     def stop(self):
         """
