@@ -133,8 +133,8 @@ class Interface(object):
         self.topicPolyglotConnection = 'udi/polyglot/connections/polyglot'
         self.topicInput = 'udi/polyglot/ns/{}'.format(self.profileNum)
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
-        self._mqttc = mqtt.Client(envVar)
-        self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
+        self._mqttc = mqtt.Client(envVar, False)
+        #self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
         self._mqttc.on_message = self._message
         self._mqttc.on_subscribe = self._subscribe
@@ -279,7 +279,7 @@ class Interface(object):
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
         try:
             #self._mqttc.connect_async(str(self._server), int(self._port), 10)
-            self._mqttc.connect('{}'.format(self._server), int(self._port), 120)
+            self._mqttc.connect('{}'.format(self._server), int(self._port))
             self._mqttc.loop_start()
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
