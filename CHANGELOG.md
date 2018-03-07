@@ -1,5 +1,9 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.22
+* Added reportCmd
+* Fixed MQTT Timeout Issue
+
 ### Version 2.0.18
 * ST connection set from polyinterface
 
