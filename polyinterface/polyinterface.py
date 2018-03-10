@@ -471,7 +471,7 @@ class Node(object):
 
     def reportDriver(self, driver, report, force):
         for d in self._drivers:
-            if d['driver'] == driver['driver'] and (d['value'] != str(driver['value']) or force):
+            if d['driver'] == driver['driver'] and (str(d['value']) != str(driver['value']) or force):
                 LOGGER.info('Updating Driver {} - {}: {}'.format(self.address, driver['driver'], driver['value']))
                 d['value'] = deepcopy(driver['value'])
                 message = {
