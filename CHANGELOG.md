@@ -1,5 +1,8 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.23
+* setDriver has optional uom argument now
+
 ### Version 2.0.22
 * Added reportCmd
 * Fixed MQTT Timeout Issue

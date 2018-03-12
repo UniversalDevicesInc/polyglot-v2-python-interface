@@ -461,19 +461,26 @@ class Node(object):
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
 
-    def setDriver(self, driver, value, report = True, force = False):
+    def setDriver(self, driver, value, report = True, force = False, uom=None):
         for d in self.drivers:
             if d['driver'] == driver:
                 d['value'] = value
+                if uom is not None:
+                    d['uom'] = uom
                 if report:
                     self.reportDriver(d, report, force)
                 break
 
     def reportDriver(self, driver, report, force):
         for d in self._drivers:
-            if d['driver'] == driver['driver'] and (str(d['value']) != str(driver['value']) or force):
-                LOGGER.info('Updating Driver {} - {}: {}'.format(self.address, driver['driver'], driver['value']))
+            if (d['driver'] == driver['driver'] and
+                   (str(d['value']) != str(driver['value'])
+                    or d['uom'] != driver['uom']
+                    or force)):
+                LOGGER.info('Updating Driver {} - {}: {}, uom: {}'.format(self.address, driver['driver'], driver['value'], driver['uom']))
                 d['value'] = deepcopy(driver['value'])
+                if d['uom'] != driver['uom']:
+                    d['uom'] = deepcopy(driver['uom'])
                 message = {
                     'status': {
                         'address': self.address,
