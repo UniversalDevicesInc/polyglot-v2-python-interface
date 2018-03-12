@@ -1,17 +1,21 @@
 from distutils.core import setup
 from setuptools import find_packages
+import re
+
+with open("polyinterface/__init__.py") as meta_file:
+    metadata = dict(re.findall("__([a-z]+)__\s*=\s*'([^']+)'", meta_file.read()))
 
 setup(name='polyinterface',
-      version='2.0.24',
-      description='UDI Polyglot v2 Interface',
-      url='https://github.com/UniversalDevicesInc/polyglot-v2-python-interface',
-      author='James Milne',
-      author_email='milne.james@gmail.com',
-      license='MIT',
+      version=metadata['version'],
+      description=metadata['description'],
+      url=metadata['url'],
+      author=metadata['author'],
+      author_email=metadata['authoremail'],
+      license=metadata['license'],
       packages=find_packages(),
       install_requires=[
-	"paho-mqtt",
-	"python-dotenv",
+          "paho-mqtt",
+          "python-dotenv",
         ],
       python_requires='>2.7,!=3.0.*,!=3.1.*,!=3.2.*',
       zip_safe=False,
