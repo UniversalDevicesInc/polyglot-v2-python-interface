@@ -607,7 +607,7 @@ class Controller(Node):
         if not self.started:
             self.nodes[self.address] = self
             self.started = True
-            self.setDriver('ST', 1, True, True)
+            #self.setDriver('ST', 1, True, True)
             self.start()
 
     def _startThreads(self):
@@ -652,7 +652,7 @@ class Controller(Node):
                 if result['addnode']['success'] == True:
                     if not result['addnode']['address'] == self.address:
                         self.nodes[result['addnode']['address']].start()
-                    self.nodes[result['addnode']['address']].reportDrivers()
+                    #self.nodes[result['addnode']['address']].reportDrivers()
                     self.nodesAdding.remove(result['addnode']['address'])
                 else:
                     del self.nodes[result['addnode']['address']]
@@ -678,16 +678,24 @@ class Controller(Node):
     If update is True, overwrite the node in Polyglot
     """
     def addNode(self, node, update = False):
+        if node.address in self._nodes:
+            node._drivers = self._nodes[node.address]['drivers']
+            for driver in node.drivers:
+                for existing in self._nodes[node.address]['drivers']:
+                    if driver['driver'] == existing['driver']:
+                        driver['value'] = existing['value']
+                        #JIMBO SAYS NO
+                        #driver['uom'] = existing['uom']
         self.nodes[node.address] = node
-        if node.address not in self._nodes or update:
-            self.nodesAdding.append(node.address)
-            self.poly.addNode(node)
-        else:
-            self.nodes[node.address].start()
+        #if node.address not in self._nodes or update:
+        self.nodesAdding.append(node.address)
+        self.poly.addNode(node)
+        #else:
+        #    self.nodes[node.address].start()
         return node
 
     """
-    Same as AddNode update = True
+    Forces a full overwrite of the node
     """
     def updateNode(self, node):
         self.nodes[node.address] = node
