@@ -647,13 +647,15 @@ class Controller(Node):
             self.poly.inQueue.task_done()
 
     def _handleResult(self, result):
+        #LOGGER.debug(self.nodesAdding)
         try:
             if 'addnode' in result:
                 if result['addnode']['success'] == True:
                     if not result['addnode']['address'] == self.address:
                         self.nodes[result['addnode']['address']].start()
                     #self.nodes[result['addnode']['address']].reportDrivers()
-                    self.nodesAdding.remove(result['addnode']['address'])
+                    if result['addnode']['address'] in self.nodesAdding:
+                        self.nodesAdding.remove(result['addnode']['address'])
                 else:
                     del self.nodes[result['addnode']['address']]
         except (KeyError, ValueError) as err:
