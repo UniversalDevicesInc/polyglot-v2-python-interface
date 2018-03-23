@@ -622,10 +622,13 @@ class Controller(Node):
             input = self.poly.inQueue.get()
             for key in input:
                 if key == 'command':
-                    try:
-                        self.nodes[input[key]['address']].runCmd(input[key])
-                    except KeyError as err:
-                        LOGGER.error('_parseInput: {}, received command for the node that is not in memory: {}'.format(err, input[key]['address']))
+                    if input[key]['address'] in self.nodes:
+                        try:
+                            self.nodes[input[key]['address']].runCmd(input[key])
+                        except (Exception) as err:
+                            LOGGER.error('_parseInput: failed {}.runCmd({}) {}'.format(input[key]['address'],input[key]['cmd'],err), exc_info=True)
+                    else:
+                        LOGGER.error('_parseInput: received command {} for a node that is not in memory: {}'.format(input[key]['cmd'],input[key]['address']))
                 elif key == 'result':
                     self._handleResult(input[key])
                 elif key == 'delete':
