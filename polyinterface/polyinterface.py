@@ -71,7 +71,6 @@ LOGGER = setup_log()
 sys.stdout = LoggerWriter(LOGGER.debug)
 sys.stderr = LoggerWriter(LOGGER.error)
 
-LOGGER.info('Polyglot v2 Interface Starting...')
 """
 Grab the ~/.polyglot/.env file for variables
 If you are running Polyglot v2 on this same machine
