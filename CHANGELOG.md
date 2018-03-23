@@ -1,5 +1,11 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.26
+* Will not work properly with polyglot version 2.1.1 or prior.
+* polyinterface version is printed to nodeserver log on startup
+* addNode automatically adds/removes drivers for existing nodes, no need for update=True anymore
+* addNode and updateNode can change the node_def_id
+
 ### Version 2.0.23
 * setDriver has optional uom argument now
 
