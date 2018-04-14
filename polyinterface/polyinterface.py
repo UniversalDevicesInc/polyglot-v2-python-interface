@@ -4,30 +4,29 @@ Python Interface for UDI Polyglot v2 NodeServers
 by Einstein.42 (James Milne) milne.james@gmail.com
 """
 
+from copy import deepcopy
+from dotenv import load_dotenv
+import json
 import logging
 import logging.handlers
-import warnings
-import time
-import json
-import sys
-import select
+import __main__ as main
 import os
-import ssl
-import re
-
+from os.path import join, expanduser
+import paho.mqtt.client as mqtt
 try:
     import queue
-except (ImportError):
+except ImportError:
     import Queue as queue
-#import asyncio
-from os.path import join, expanduser
-from dotenv import load_dotenv
-import paho.mqtt.client as mqtt
+import re
+import sys
+import select
 from threading import Thread
-from copy import deepcopy
+import warnings
+
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
+
 
 class LoggerWriter(object):
     def __init__(self, level):
@@ -40,70 +39,75 @@ class LoggerWriter(object):
     def flush(self):
         pass
 
-def setup_log():
-   # Log Location
-   #path = os.path.dirname(sys.argv[0])
-   if not os.path.exists('./logs'):
-       os.makedirs('./logs')
-   log_filename = "./logs/debug.log"
-   log_level = logging.DEBUG  # Could be e.g. "DEBUG" or "WARNING"
 
-   #### Logging Section ################################################################################
-   logging.captureWarnings(True)
-   logger = logging.getLogger(__name__)
-   warnlog = logging.getLogger('py.warnings')
-   warnings.formatwarning = warning_on_one_line
-   logger.setLevel(log_level)
-   # Set the log level to LOG_LEVEL
-   # Make a handler that writes to a file,
-   # making a new file at midnight and keeping 3 backups
-   handler = logging.handlers.TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
-   # Format each log message like this
-   formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
-   # Attach the formatter to the handler
-   handler.setFormatter(formatter)
-   # Attach the handler to the logger
-   logger.addHandler(handler)
-   warnlog.addHandler(handler)
-   return logger
+def setup_log():
+    # Log Location
+    # path = os.path.dirname(sys.argv[0])
+    if not os.path.exists('./logs'):
+        os.makedirs('./logs')
+    log_filename = "./logs/debug.log"
+    log_level = logging.DEBUG  # Could be e.g. "DEBUG" or "WARNING"
+
+    # ### Logging Section ################################################################################
+    logging.captureWarnings(True)
+    logger = logging.getLogger(__name__)
+    warnlog = logging.getLogger('py.warnings')
+    warnings.formatwarning = warning_on_one_line
+    logger.setLevel(log_level)
+    # Set the log level to LOG_LEVEL
+    # Make a handler that writes to a file,
+    # making a new file at midnight and keeping 3 backups
+    handler = logging.handlers.TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
+    # Format each log message like this
+    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    # Attach the formatter to the handler
+    handler.setFormatter(formatter)
+    # Attach the handler to the logger
+    logger.addHandler(handler)
+    warnlog.addHandler(handler)
+    return logger
 
 LOGGER = setup_log()
-sys.stdout = LoggerWriter(LOGGER.debug)
-sys.stderr = LoggerWriter(LOGGER.error)
 
-"""
-Grab the ~/.polyglot/.env file for variables
-If you are running Polyglot v2 on this same machine
-then it should already exist. If not create it.
-"""
-warnings.simplefilter('error', UserWarning)
-try:
-    load_dotenv(join(expanduser("~") + '/.polyglot/.env'))
-except (UserWarning) as err:
-    LOGGER.warning('File does not exist: {}.'.format(join(expanduser("~") + '/.polyglot/.env')), exc_info=True)
-    # sys.exit(1)
-warnings.resetwarnings()
 
-"""
-If this NodeServer is co-resident with Polyglot it will receive a STDIN config on startup
-that looks like:
-{"token":"2cb40e507253fc8f4cbbe247089b28db79d859cbed700ec151",
-"mqttHost":"localhost","mqttPort":"1883","profileNum":"10"}
-"""
+def init_interface():
+    sys.stdout = LoggerWriter(LOGGER.debug)
+    sys.stderr = LoggerWriter(LOGGER.error)
 
-init = select.select([sys.stdin], [], [], 1)[0]
-if init:
-    line = sys.stdin.readline()
+    """
+    Grab the ~/.polyglot/.env file for variables
+    If you are running Polyglot v2 on this same machine
+    then it should already exist. If not create it.
+    """
+    warnings.simplefilter('error', UserWarning)
     try:
-        line = json.loads(line)
-        os.environ['PROFILE_NUM'] = line['profileNum']
-        os.environ['MQTT_HOST'] = line['mqttHost']
-        os.environ['MQTT_PORT'] = line['mqttPort']
-        os.environ['TOKEN'] = line['token']
-        LOGGER.info('Received Config from STDIN.')
-    except (Exception) as err:
-        #e = sys.exc_info()[0]
-        LOGGER.error('Invalid formatted input. Skipping. {}'.format(err), exc_info=True)
+        load_dotenv(join(expanduser("~") + '/.polyglot/.env'))
+    except (UserWarning) as err:
+        LOGGER.warning('File does not exist: {}.'.format(join(expanduser("~") + '/.polyglot/.env')), exc_info=True)
+        # sys.exit(1)
+    warnings.resetwarnings()
+
+    """
+    If this NodeServer is co-resident with Polyglot it will receive a STDIN config on startup
+    that looks like:
+    {"token":"2cb40e507253fc8f4cbbe247089b28db79d859cbed700ec151",
+    "mqttHost":"localhost","mqttPort":"1883","profileNum":"10"}
+    """
+
+    init = select.select([sys.stdin], [], [], 1)[0]
+    if init:
+        line = sys.stdin.readline()
+        try:
+            line = json.loads(line)
+            os.environ['PROFILE_NUM'] = line['profileNum']
+            os.environ['MQTT_HOST'] = line['mqttHost']
+            os.environ['MQTT_PORT'] = line['mqttPort']
+            os.environ['TOKEN'] = line['token']
+            LOGGER.info('Received Config from STDIN.')
+        except (Exception) as err:
+            # e = sys.exc_info()[0]
+            LOGGER.error('Invalid formatted input. Skipping. %s', err, exc_info=True)
+
 
 class Interface(object):
     """
@@ -116,7 +120,7 @@ class Interface(object):
 
     __exists = False
 
-    def __init__(self, envVar = None):
+    def __init__(self, envVar=None):
         if self.__exists:
             warnings.warn('Only one Interface is allowed.')
             return
@@ -133,7 +137,7 @@ class Interface(object):
         self.topicInput = 'udi/polyglot/ns/{}'.format(self.profileNum)
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
         self._mqttc = mqtt.Client(envVar, True)
-        #self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
+        # self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
         self._mqttc.on_message = self._message
         self._mqttc.on_subscribe = self._subscribe
@@ -147,12 +151,12 @@ class Interface(object):
             self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
                 join(expanduser("~") + '/.polyglot/ssl/client.crt'),
                 join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
-        #self._mqttc.tls_insecure_set(True)
+        # self._mqttc.tls_insecure_set(True)
         self.config = None
-        #self.loop = asyncio.new_event_loop()
+        # self.loop = asyncio.new_event_loop()
         self.loop = None
         self.inQueue = queue.Queue()
-        #self.thread = Thread(target=self.start_loop)
+        # self.thread = Thread(target=self.start_loop)
         self.isyVersion = None
         self._server = os.environ.get("MQTT_HOST") or 'localhost'
         self._port = os.environ.get("MQTT_PORT") or '1883'
@@ -198,7 +202,7 @@ class Interface(object):
                     LOGGER.info("MQTT Subscription to " + topic + " failed. This is unusual. MID: " + str(mid) + " Result: " + str(result))
                     # If subscription fails, try to reconnect.
                     self._mqttc.reconnect()
-            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': True}), retain = True)
+            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': True}), retain=True)
             LOGGER.info('Sent Connected message to Polyglot')
         else:
             LOGGER.error("MQTT Failed to connect. Result code: " + str(rc))
@@ -216,10 +220,11 @@ class Interface(object):
             inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll', 'delete']
             parsed_msg = json.loads(msg.payload.decode('utf-8'))
             if 'node' in parsed_msg:
-                if parsed_msg['node'] != 'polyglot': return
+                if parsed_msg['node'] != 'polyglot':
+                    return
                 del parsed_msg['node']
                 for key in parsed_msg:
-                    #LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
+                    # LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
                     if key == 'config':
                         self.inConfig(parsed_msg[key])
                     elif key == 'connected':
@@ -257,7 +262,7 @@ class Interface(object):
 
     def _log(self, mqttc, userdata, level, string):
         """ Use for debugging MQTT Packets, disable for normal use, NOISY. """
-        #LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
+        # LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
         pass
 
     def _subscribe(self, mqttc, userdata, mid, granted_qos):
@@ -267,7 +272,7 @@ class Interface(object):
 
     def _publish(self, mqttc, userdata, mid):
         """ Callback for publish message. Unused currently. """
-        #LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
+        # LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
         pass
 
     def start(self):
@@ -277,7 +282,7 @@ class Interface(object):
         """
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
         try:
-            #self._mqttc.connect_async(str(self._server), int(self._port), 10)
+            # self._mqttc.connect_async(str(self._server), int(self._port), 10)
             self._mqttc.connect('{}'.format(self._server), int(self._port), 10)
             self._mqttc.loop_start()
         except Exception as ex:
@@ -291,13 +296,13 @@ class Interface(object):
         stop the thread and disconnect. Publish the disconnected
         message if clean shutdown.
         """
-        #self.loop.call_soon_threadsafe(self.loop.stop)
-        #self.loop.stop()
-        #self._longPoll.cancel()
-        #self._shortPoll.cancel()
+        # self.loop.call_soon_threadsafe(self.loop.stop)
+        # self.loop.stop()
+        # self._longPoll.cancel()
+        # self._shortPoll.cancel()
         if self.connected:
             LOGGER.info('Disconnecting from MQTT... {}:{}'.format(self._server, self._port))
-            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain = True)
+            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
             self._mqttc.loop_stop()
             self._mqttc.disconnect()
         try:
@@ -316,7 +321,7 @@ class Interface(object):
             return False
         try:
             message['node'] = self.profileNum
-            self._mqttc.publish(self.topicInput, json.dumps(message), retain = False)
+            self._mqttc.publish(self.topicInput, json.dumps(message), retain=False)
         except TypeError as err:
             LOGGER.error('MQTT Send Error: {}'.format(err), exc_info=True)
 
@@ -418,7 +423,7 @@ class Interface(object):
                 if node['address'] == address:
                     return node
             return False
-        except KeyError as e:
+        except KeyError:
             LOGGER.error('Usually means we have not received the config yet.', exc_info=True)
             return False
 
@@ -437,6 +442,7 @@ class Interface(object):
 
     def input(self, command):
         self.inQueue.put(command)
+
 
 class Node(object):
     """
@@ -460,7 +466,7 @@ class Node(object):
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
 
-    def setDriver(self, driver, value, report = True, force = False, uom=None):
+    def setDriver(self, driver, value, report=True, force=False, uom=None):
         for d in self.drivers:
             if d['driver'] == driver:
                 d['value'] = value
@@ -473,9 +479,9 @@ class Node(object):
     def reportDriver(self, driver, report, force):
         for d in self._drivers:
             if (d['driver'] == driver['driver'] and
-                   (str(d['value']) != str(driver['value'])
-                    or d['uom'] != driver['uom']
-                    or force)):
+                (str(d['value']) != str(driver['value']) or
+                    d['uom'] != driver['uom'] or
+                    force)):
                 LOGGER.info('Updating Driver {} - {}: {}, uom: {}'.format(self.address, driver['driver'], driver['value'], driver['uom']))
                 d['value'] = deepcopy(driver['value'])
                 if d['uom'] != driver['uom']:
@@ -553,6 +559,7 @@ class Node(object):
     drivers = []
     sends = {}
 
+
 class Controller(Node):
     """
     Controller Class for controller management. Superclass of Node
@@ -600,13 +607,13 @@ class Controller(Node):
                 n.timeAdded = node['timeAdded']
                 n.enabled = node['enabled']
                 n.added = node['added']
-        if not self.address in self._nodes:
+        if self.address not in self._nodes:
             self.addNode(self)
             LOGGER.info('Waiting on Controller node to be added.......')
         if not self.started:
             self.nodes[self.address] = self
             self.started = True
-            #self.setDriver('ST', 1, True, True)
+            # self.setDriver('ST', 1, True, True)
             self.start()
 
     def _startThreads(self):
@@ -625,9 +632,9 @@ class Controller(Node):
                         try:
                             self.nodes[input[key]['address']].runCmd(input[key])
                         except (Exception) as err:
-                            LOGGER.error('_parseInput: failed {}.runCmd({}) {}'.format(input[key]['address'],input[key]['cmd'],err), exc_info=True)
+                            LOGGER.error('_parseInput: failed {}.runCmd({}) {}'.format(input[key]['address'], input[key]['cmd'], err), exc_info=True)
                     else:
-                        LOGGER.error('_parseInput: received command {} for a node that is not in memory: {}'.format(input[key]['cmd'],input[key]['address']))
+                        LOGGER.error('_parseInput: received command {} for a node that is not in memory: {}'.format(input[key]['cmd'], input[key]['address']))
                 elif key == 'result':
                     self._handleResult(input[key])
                 elif key == 'delete':
@@ -649,13 +656,13 @@ class Controller(Node):
             self.poly.inQueue.task_done()
 
     def _handleResult(self, result):
-        #LOGGER.debug(self.nodesAdding)
+        # LOGGER.debug(self.nodesAdding)
         try:
             if 'addnode' in result:
-                if result['addnode']['success'] == True:
+                if result['addnode']['success']:
                     if not result['addnode']['address'] == self.address:
                         self.nodes[result['addnode']['address']].start()
-                    #self.nodes[result['addnode']['address']].reportDrivers()
+                    # self.nodes[result['addnode']['address']].reportDrivers()
                     if result['addnode']['address'] in self.nodesAdding:
                         self.nodesAdding.remove(result['addnode']['address'])
                 else:
@@ -681,20 +688,20 @@ class Controller(Node):
     AddNode adds the class to self.nodes then sends the request to Polyglot
     If update is True, overwrite the node in Polyglot
     """
-    def addNode(self, node, update = False):
+    def addNode(self, node, update=False):
         if node.address in self._nodes:
             node._drivers = self._nodes[node.address]['drivers']
             for driver in node.drivers:
                 for existing in self._nodes[node.address]['drivers']:
                     if driver['driver'] == existing['driver']:
                         driver['value'] = existing['value']
-                        #JIMBO SAYS NO
-                        #driver['uom'] = existing['uom']
+                        # JIMBO SAYS NO
+                        # driver['uom'] = existing['uom']
         self.nodes[node.address] = node
-        #if node.address not in self._nodes or update:
+        # if node.address not in self._nodes or update:
         self.nodesAdding.append(node.address)
         self.poly.addNode(node)
-        #else:
+        # else:
         #    self.nodes[node.address].start()
         return node
 
@@ -751,10 +758,10 @@ class Controller(Node):
             self.poly.saveCustomParams(newData)
 
     def removeCustomParam(self, data):
-        try: # check whether python knows about 'basestring'
-           basestring
-        except NameError: # no, it doesn't (it's Python3); use 'str' instead
-           basestring=str
+        try:  # check whether python knows about 'basestring'
+            basestring
+        except NameError:  # no, it doesn't (it's Python3); use 'str' instead
+            basestring = str
         if not isinstance(data, basestring):
             LOGGER.error('removeCustomParam: data isn\'t a string. Ignoring.')
         else:
@@ -762,7 +769,7 @@ class Controller(Node):
                 newData = deepcopy(self.poly.config['customParams'])
                 newData.pop(data)
                 self.poly.saveCustomParams(newData)
-            except (KeyError) as err:
+            except KeyError:
                 LOGGER.error('{} not found in customParams. Ignoring...'.format(data), exc_info=True)
 
     def getCustomParam(self, data):
@@ -770,10 +777,10 @@ class Controller(Node):
         return params.get(data)
 
     def addNotice(self, data):
-        try: # check whether python knows about 'basestring'
-           basestring
-        except NameError: # no, it doesn't (it's Python3); use 'str' instead
-           basestring=str
+        try:  # check whether python knows about 'basestring'
+            basestring
+        except NameError:  # no, it doesn't (it's Python3); use 'str' instead
+            basestring = str
         if not isinstance(data, basestring):
             LOGGER.error('addNotice: data isn\'t a string. Ignoring.')
         else:
@@ -808,3 +815,6 @@ class Controller(Node):
 
 if __name__ == "__main__":
     sys.exit(0)
+
+if hasattr(main, '__file__'):
+    init_interface()
