@@ -791,8 +791,7 @@ class Controller(Node):
             LOGGER.error('removeNotice: data isn\'t a int. Ignoring.')
         else:
             try:
-                self.poly.config['notices'][data]
-                self.poly.removeNotice(data)
+                self.poly.removeNotice(self.poly.config['notices'][data])
             except (IndexError) as err:
                 LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err), exc_info=True)
 
