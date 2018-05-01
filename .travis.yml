@@ -3,6 +3,8 @@ language:
 python:
 - '3.6'
 install: python setup.py install
+before_script:
+- 'mkdir ~/.polyglot && printf "Test=1\nUSE_HTTPS=false" > ~/.polyglot/.env'
 script: python tests.py
 notifications:
   slack:
