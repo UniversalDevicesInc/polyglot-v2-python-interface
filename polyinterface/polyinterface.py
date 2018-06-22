@@ -850,9 +850,13 @@ class Controller(Node):
         return self.poly.config['notices']
 
     def removeNoticesAll(self):
-        if len(self.poly.config['notices']):
-            for i in range(len(self.poly.config['notices'])):
-                self.removeNotice(i)
+        if (self.poly.supports_feature('noticeByKey')):
+            for key in self.poly.config['notices'].keys():
+                self.removeNotice(key)
+        else:
+            if len(self.poly.config['notices']):
+                for i in range(len(self.poly.config['notices'])):
+                    self.removeNotice(i)
 
     def stop(self):
         """ Called on nodeserver stop """
