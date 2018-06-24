@@ -176,7 +176,8 @@ class Interface(object):
         self.__configObservers = []
         self.__stopObservers = []
         Interface.__exists = True
-        self.custom_params_docs_sent = False
+        self.custom_params_docs_file_sent = False
+        self.custom_params_pending_docs = ''
 
     def onConfig(self, callback):
         """
@@ -456,8 +457,7 @@ class Interface(object):
             for watcher in self.__configObservers:
                 watcher(config)
 
-            if self.supports_feature('customParamsDoc') and not self.custom_params_docs_sent:
-                self.send_custom_config_docs()
+            self.send_custom_config_docs()
 
         except KeyError as e:
             LOGGER.error('KeyError in gotConfig: {}'.format(e), exc_info=True)
@@ -467,24 +467,40 @@ class Interface(object):
 
     def supports_feature(self, feature):
         if self.config is None:
-            LOGGER.error('Can''t verify feature support before config is received')
             return False
 
         feature_support = self.config.get('features', {}).get(feature, 'off')
         if feature_support == 'deprecated':
-            LOGGER.warn('Deprecated feature detected {}. Update interface and node server.'.format(feature))
+            LOGGER.warning('Deprecated feature detected {}. Update interface and node server.'.format(feature))
             return True
 
         return feature_support == 'on'
 
     def send_custom_config_docs(self):
-        data = ''
-        if os.path.isfile(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME):
-            data = markdown2.markdown_path(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
+        if not self.supports_feature('customParamsDoc'):
+            return
 
-        self.custom_params_docs_sent = True
-        message = { 'customparamsdoc': data }
-        self.send(message)
+        data = ''
+        if not self.custom_params_docs_file_sent:
+            if os.path.isfile(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME):
+                data = markdown2.markdown_path(
+                    Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
+        else:
+            data = self.config.get('customParamsDoc', '')
+
+        # send if we're sending new file or there are updates
+        if (not self.custom_params_docs_file_sent or
+            len(self.custom_params_pending_docs) > 0):
+            data += self.custom_params_pending_docs
+            self.custom_params_docs_file_sent = True
+            self.custom_params_pending_docs = ''
+
+            self.config['customParamsDoc'] = data
+            self.send({ 'customparamsdoc': data })
+
+    def add_custom_config_docs(self, data):
+        self.custom_params_pending_docs += data
+        self.send_custom_config_docs()
 
 
 class Node(object):
@@ -796,7 +812,7 @@ class Controller(Node):
         if not isinstance(data, dict):
             LOGGER.error('addCustomParam: data isn\'t a dictionary. Ignoring.')
         else:
-            newData = deepcopy(self.poly.config['customParams'])
+            newData = self.poly.config['customParams']
             newData.update(data)
             self.poly.saveCustomParams(newData)
 
