@@ -866,7 +866,7 @@ class Controller(Node):
         return self.poly.config['notices']
 
     def removeNoticesAll(self):
-        if (self.poly.supports_feature('noticeByKey')):
+        if type(self.poly.config['notices']) == dict:
             for key in self.poly.config['notices'].keys():
                 self.removeNotice(key)
         else:
