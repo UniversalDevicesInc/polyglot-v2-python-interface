@@ -476,15 +476,20 @@ class Interface(object):
 
         return feature_support == 'on'
 
+    def get_md_file_data(self, fileName):
+        data = ''
+        if os.path.isfile(fileName):
+            data = markdown2.markdown_path(fileName)
+
+        return data
+
     def send_custom_config_docs(self):
         if not self.supports_feature('customParamsDoc'):
             return
 
         data = ''
         if not self.custom_params_docs_file_sent:
-            if os.path.isfile(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME):
-                data = markdown2.markdown_path(
-                    Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
+            self.get_md_file_data(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
         else:
             data = self.config.get('customParamsDoc', '')
 
@@ -501,6 +506,31 @@ class Interface(object):
     def add_custom_config_docs(self, data):
         self.custom_params_pending_docs += data
         self.send_custom_config_docs()
+
+    def save_typed_params(self, data):
+        """
+        Send custom parameters descriptions to Polyglot to be used
+        in front end UI configuration screen
+        Accepts list of objects with the followin properties
+            name - used as a key when data is sent from UI
+            title - displayed in UI
+            defaultValue - optionanl
+            type - optional, can be 'NUMBER', 'STRING' or 'BOOLEAN'.
+                Defaults to 'STRING'
+            desc - optional, shown in tooltip in UI
+            isRequired - optional, True/False, when set, will not validate UI
+                input if it's empty
+            isList - optional, True/False, if set this will be treated as list
+                of values or objects by UI
+            params - optional, can contain a list of objects. If present, then
+                this (parent) is treated as object / list of objects by UI,
+                otherwise, it's treated as a single / list of single values
+        """
+        LOGGER.info('Sending typed parameters to Polyglot.')
+        if type(data) is not list:
+            data = [ data ]
+        message = { 'typedparams': data }
+        self.send(message)
 
 
 class Node(object):

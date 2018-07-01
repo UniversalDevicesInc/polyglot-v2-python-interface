@@ -6,7 +6,8 @@ __authoremail__ = 'milne.james@gmail.com'
 __license__ = 'MIT'
 __features__ = {
     "noticeByKey": "on",
-    "customParamsDoc": "on"
+    "customParamsDoc": "on",
+    "typedParams": "on"
 }
 
 from .polyinterface import Interface, Node, Controller, LOGGER, unload_interface
