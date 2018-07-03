@@ -489,7 +489,7 @@ class Interface(object):
 
         data = ''
         if not self.custom_params_docs_file_sent:
-            self.get_md_file_data(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
+            data = self.get_md_file_data(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
         else:
             data = self.config.get('customParamsDoc', '')
 
