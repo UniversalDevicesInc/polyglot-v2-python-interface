@@ -1,5 +1,9 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.27
+* Remove notice fixed https://github.com/UniversalDevicesInc/polyglot-v2/issues/19
+* Interactive fixes https://github.com/UniversalDevicesInc/polyglot-v2-python-interface/pull/2
+
 ### Version 2.0.26
 * Will not work properly with polyglot version 2.1.1 or prior.
 * polyinterface version is printed to nodeserver log on startup
