@@ -6,20 +6,21 @@ with open("polyinterface/__init__.py") as meta_file:
     metadata = dict(re.findall("__([a-z]+)__\s*=\s*'([^']+)'", meta_file.read()))
 
 setup(name='polyinterface',
-      version=metadata['version'],
-      description=metadata['description'],
-      url=metadata['url'],
-      author=metadata['author'],
-      author_email=metadata['authoremail'],
-      license=metadata['license'],
-      packages=find_packages(),
-      install_requires=[
-          "paho-mqtt",
-          "python-dotenv",
-        ],
-      python_requires='>2.7,!=3.0.*,!=3.1.*,!=3.2.*',
-      zip_safe=False,
-          # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    version=metadata['version'],
+    description=metadata['description'],
+    url=metadata['url'],
+    author=metadata['author'],
+    author_email=metadata['authoremail'],
+    license=metadata['license'],
+    packages=find_packages(),
+    install_requires=[
+        "paho-mqtt",
+        "python-dotenv",
+        "markdown2"
+    ],
+    python_requires='>2.7,!=3.0.*,!=3.1.*,!=3.2.*',
+    zip_safe=False,
+    # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         # How Mature is this project? Common values are
         #   3 - Alpha

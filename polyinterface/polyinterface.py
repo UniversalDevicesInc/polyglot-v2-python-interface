@@ -10,6 +10,7 @@ import json
 import logging
 import logging.handlers
 import __main__ as main
+import markdown2
 import os
 from os.path import join, expanduser
 import paho.mqtt.client as mqtt
@@ -22,6 +23,8 @@ import sys
 import select
 from threading import Thread
 import warnings
+
+from polyinterface import __features__
 
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
@@ -109,7 +112,16 @@ def init_interface():
             LOGGER.error('Invalid formatted input. Skipping. %s', err, exc_info=True)
 
 
+def unload_interface():
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
+    LOGGER.handlers = []
+
+
 class Interface(object):
+
+    CUSTOM_CONFIG_DOCS_FILE_NAME = 'POLYGLOT_CONFIG.md'
+
     """
     Polyglot Interface Class
 
@@ -164,6 +176,8 @@ class Interface(object):
         self.__configObservers = []
         self.__stopObservers = []
         Interface.__exists = True
+        self.custom_params_docs_file_sent = False
+        self.custom_params_pending_docs = ''
 
     def onConfig(self, callback):
         """
@@ -202,7 +216,12 @@ class Interface(object):
                     LOGGER.info("MQTT Subscription to " + topic + " failed. This is unusual. MID: " + str(mid) + " Result: " + str(result))
                     # If subscription fails, try to reconnect.
                     self._mqttc.reconnect()
-            self._mqttc.publish(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': True}), retain=True)
+            self._mqttc.publish(self.topicSelfConnection, json.dumps(
+                {
+                    'connected': True,
+                    'node': self.profileNum,
+                    'features': __features__
+                }), retain=True)
             LOGGER.info('Sent Connected message to Polyglot')
         else:
             LOGGER.error("MQTT Failed to connect. Result code: " + str(rc))
@@ -437,11 +456,81 @@ class Interface(object):
         try:
             for watcher in self.__configObservers:
                 watcher(config)
+
+            self.send_custom_config_docs()
+
         except KeyError as e:
             LOGGER.error('KeyError in gotConfig: {}'.format(e), exc_info=True)
 
     def input(self, command):
         self.inQueue.put(command)
+
+    def supports_feature(self, feature):
+        if self.config is None:
+            return False
+
+        feature_support = self.config.get('features', {}).get(feature, 'off')
+        if feature_support == 'deprecated':
+            LOGGER.warning('Deprecated feature detected {}. Update interface and node server.'.format(feature))
+            return True
+
+        return feature_support == 'on'
+
+    def get_md_file_data(self, fileName):
+        data = ''
+        if os.path.isfile(fileName):
+            data = markdown2.markdown_path(fileName)
+
+        return data
+
+    def send_custom_config_docs(self):
+        if not self.supports_feature('customParamsDoc'):
+            return
+
+        data = ''
+        if not self.custom_params_docs_file_sent:
+            data = self.get_md_file_data(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
+        else:
+            data = self.config.get('customParamsDoc', '')
+
+        # send if we're sending new file or there are updates
+        if (not self.custom_params_docs_file_sent or
+            len(self.custom_params_pending_docs) > 0):
+            data += self.custom_params_pending_docs
+            self.custom_params_docs_file_sent = True
+            self.custom_params_pending_docs = ''
+
+            self.config['customParamsDoc'] = data
+            self.send({ 'customparamsdoc': data })
+
+    def add_custom_config_docs(self, data):
+        self.custom_params_pending_docs += data
+        self.send_custom_config_docs()
+
+    def save_typed_params(self, data):
+        """
+        Send custom parameters descriptions to Polyglot to be used
+        in front end UI configuration screen
+        Accepts list of objects with the followin properties
+            name - used as a key when data is sent from UI
+            title - displayed in UI
+            defaultValue - optionanl
+            type - optional, can be 'NUMBER', 'STRING' or 'BOOLEAN'.
+                Defaults to 'STRING'
+            desc - optional, shown in tooltip in UI
+            isRequired - optional, True/False, when set, will not validate UI
+                input if it's empty
+            isList - optional, True/False, if set this will be treated as list
+                of values or objects by UI
+            params - optional, can contain a list of objects. If present, then
+                this (parent) is treated as object / list of objects by UI,
+                otherwise, it's treated as a single / list of single values
+        """
+        LOGGER.info('Sending typed parameters to Polyglot.')
+        if type(data) is not list:
+            data = [ data ]
+        message = { 'typedparams': data }
+        self.send(message)
 
 
 class Node(object):
@@ -753,7 +842,7 @@ class Controller(Node):
         if not isinstance(data, dict):
             LOGGER.error('addCustomParam: data isn\'t a dictionary. Ignoring.')
         else:
-            newData = deepcopy(self.poly.config['customParams'])
+            newData = self.poly.config['customParams']
             newData.update(data)
             self.poly.saveCustomParams(newData)
 
@@ -776,7 +865,7 @@ class Controller(Node):
         params = deepcopy(self.poly.config['customParams'])
         return params.get(data)
 
-    def addNotice(self, data):
+    def addNotice(self, data, key=None):
         try:  # check whether python knows about 'basestring'
             basestring
         except NameError:  # no, it doesn't (it's Python3); use 'str' instead
@@ -784,24 +873,36 @@ class Controller(Node):
         if not isinstance(data, basestring):
             LOGGER.error('addNotice: data isn\'t a string. Ignoring.')
         else:
-            self.poly.addNotice(data)
+            if (self.poly.supports_feature('noticeByKey')):
+                self.poly.addNotice({ 'key': key, 'value': data})
+            else:
+                self.poly.addNotice(data)
 
-    def removeNotice(self, data):
-        if not isinstance(data, int):
-            LOGGER.error('removeNotice: data isn\'t a int. Ignoring.')
+    def removeNotice(self, key):
+        if (self.poly.supports_feature('noticeByKey')):
+            data = { 'key': str(key) }
         else:
+            if not isinstance(key, int):
+                LOGGER.error('removeNotice: key isn\'t a int. Ignoring.')
+                return
             try:
-                self.poly.removeNotice(self.poly.config['notices'][data])
+                data = self.poly.config['notices'][key]
             except (IndexError) as err:
                 LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err), exc_info=True)
+                return
+        self.poly.removeNotice(data)
 
     def getNotices(self):
         return self.poly.config['notices']
 
     def removeNoticesAll(self):
-        if len(self.poly.config['notices']):
-            for i in range(len(self.poly.config['notices'])):
-                self.removeNotice(i)
+        if type(self.poly.config['notices']) == dict:
+            for key in self.poly.config['notices'].keys():
+                self.removeNotice(key)
+        else:
+            if len(self.poly.config['notices']):
+                for i in range(len(self.poly.config['notices'])):
+                    self.removeNotice(i)
 
     def stop(self):
         """ Called on nodeserver stop """
