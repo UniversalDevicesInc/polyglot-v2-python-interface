@@ -503,7 +503,10 @@ class Interface(object):
             self.config['customParamsDoc'] = data
             self.send({ 'customparamsdoc': data })
 
-    def add_custom_config_docs(self, data):
+    def add_custom_config_docs(self, data, clearCurrentData=False):
+        if clearCurrentData:
+            self.custom_params_docs_file_sent = False
+
         self.custom_params_pending_docs += data
         self.send_custom_config_docs()
 
