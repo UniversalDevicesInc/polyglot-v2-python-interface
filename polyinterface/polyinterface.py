@@ -54,6 +54,7 @@ def setup_log():
     # ### Logging Section ################################################################################
     logging.captureWarnings(True)
     logger = logging.getLogger(__name__)
+    logger.propagate = False
     warnlog = logging.getLogger('py.warnings')
     warnings.formatwarning = warning_on_one_line
     logger.setLevel(log_level)

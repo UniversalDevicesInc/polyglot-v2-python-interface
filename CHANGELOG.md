@@ -1,5 +1,12 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.28
+* Log propagaion fix
+* Typed parameters
+* Config docs
+* Notices by key
+* Features
+
 ### Version 2.0.27
 * Remove notice fixed https://github.com/UniversalDevicesInc/polyglot-v2/issues/19
 * Interactive fixes https://github.com/UniversalDevicesInc/polyglot-v2-python-interface/pull/2
