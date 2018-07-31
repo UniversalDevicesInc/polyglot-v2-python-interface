@@ -359,7 +359,8 @@ class Interface(object):
                     'name': node.name,
                     'node_def_id': node.id,
                     'primary': node.primary,
-                    'drivers': node.drivers
+                    'drivers': node.drivers,
+                    'hint': node.hint
                 }]
             }
         }
@@ -651,6 +652,7 @@ class Node(object):
     commands = {}
     drivers = []
     sends = {}
+    hint = [ 0, 0, 0, 0 ]
 
 
 class Controller(Node):
