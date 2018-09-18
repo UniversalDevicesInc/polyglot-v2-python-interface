@@ -161,9 +161,14 @@ class Interface(object):
         if 'USE_HTTPS' in os.environ:
             self.useSecure = os.environ['USE_HTTPS']
         if self.useSecure is True:
-            self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
-                join(expanduser("~") + '/.polyglot/ssl/client.crt'),
-                join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
+            if 'MQTT_CERTPATH' in os.environ:
+                self._mqttc.tls_set(os.environ['MQTT_CERTPATH'] + '/polyglot.crt',
+                    os.environ['MQTT_CERTPATH'] + '/client.crt',
+                    os.environ['MQTT_CERTPATH'] + '/client_private.key')
+            else:
+                self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
+                    join(expanduser("~") + '/.polyglot/ssl/client.crt'),
+                    join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
         # self._mqttc.tls_insecure_set(True)
         self.config = None
         # self.loop = asyncio.new_event_loop()
