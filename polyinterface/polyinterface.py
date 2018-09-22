@@ -175,7 +175,7 @@ class Interface(object):
                     keyfile=join(expanduser("~") + '/.polyglot/ssl/client_private.key'),
                     tls_version=ssl.PROTOCOL_TLSv1_2
                     )
-        self._mqttc.tls_insecure_set(True)
+        # self._mqttc.tls_insecure_set(True)
         self.config = None
         # self.loop = asyncio.new_event_loop()
         self.loop = None
