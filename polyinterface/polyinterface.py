@@ -64,7 +64,7 @@ def setup_log():
     # making a new file at midnight and keeping 3 backups
     handler = logging.handlers.TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
     # Format each log message like this
-    formatter = logging.Formatter('%(asctime)s %(levelname)-8s %(message)s')
+    formatter = logging.Formatter('%(asctime)s [%(threadName)-10s] [%(levelname)-5s] %(message)s')
     # Attach the formatter to the handler
     handler.setFormatter(formatter)
     # Attach the handler to the logger
@@ -150,6 +150,8 @@ class Interface(object):
         self.topicPolyglotConnection = 'udi/polyglot/connections/polyglot'
         self.topicInput = 'udi/polyglot/ns/{}'.format(self.profileNum)
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
+        self._threads = {}
+        self._threads['socket'] = Thread(target = self._startMqtt, name = 'Interface')
         self._mqttc = mqtt.Client(envVar, True)
         # self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
@@ -176,6 +178,7 @@ class Interface(object):
                     tls_version=ssl.PROTOCOL_TLSv1_2
                     )
         # self._mqttc.tls_insecure_set(True)
+        # self._mqttc.enable_logger(logger=LOGGER)
         self.config = None
         # self.loop = asyncio.new_event_loop()
         self.loop = None
@@ -307,6 +310,10 @@ class Interface(object):
         pass
 
     def start(self):
+        for _, thread in self._threads.items():
+            thread.start()
+
+    def _startMqtt(self):
         """
         The client start method. Starts the thread for the MQTT Client
         and publishes the connected message.
@@ -314,8 +321,8 @@ class Interface(object):
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
         try:
             # self._mqttc.connect_async(str(self._server), int(self._port), 10)
-            self._mqttc.connect('{}'.format(self._server), int(self._port), 10)
-            self._mqttc.loop_start()
+            self._mqttc.connect_async('{}'.format(self._server), int(self._port), 10)
+            self._mqttc.loop_forever()
         except Exception as ex:
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ex.args)
@@ -570,6 +577,20 @@ class Node(object):
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
 
+    def _convertDrivers(self, drivers):
+        return deepcopy(drivers)
+        """
+        if isinstance(drivers, list):
+            newFormat = {}
+            for driver in drivers:
+                newFormat[driver['driver']] = {}
+                newFormat[driver['driver']]['value'] = driver['value']
+                newFormat[driver['driver']]['uom'] = driver['uom']
+            return newFormat
+        else:    
+            return deepcopy(drivers)
+        """
+
     def setDriver(self, driver, value, report=True, force=False, uom=None):
         for d in self.drivers:
             if d['driver'] == driver:
@@ -687,6 +708,9 @@ class Controller(Node):
             self._nodes = {}
             self.config = None
             self.nodes = { self.address: self }
+            self._threads = {}
+            self._threads['input'] = Thread(target = self._parseInput, name = 'Controller')
+            self._threads['ns']  = Thread(target = self.start, name = 'NodeServer')
             self.polyConfig = None
             self.isPrimary = None
             self.timeAdded = None
@@ -694,7 +718,7 @@ class Controller(Node):
             self.added = None
             self.started = False
             self.nodesAdding = []
-            self._threads = []
+            # self._threads = []
             self._startThreads()
         except (KeyError) as err:
             LOGGER.error('Error Creating node: {}'.format(err), exc_info=True)
@@ -718,14 +742,12 @@ class Controller(Node):
             self.nodes[self.address] = self
             self.started = True
             # self.setDriver('ST', 1, True, True)
-            self.start()
+            self._threads['ns'].start()
 
     def _startThreads(self):
-        for i in range(1):
-            t = Thread(target=self._parseInput)
-            t.daemon = True
-            t.start()
-            self._threads.append(t)
+        self._threads['input'].daemon = True
+        self._threads['ns'].daemon = True
+        self._threads['input'].start()
 
     def _parseInput(self):
         while True:
@@ -780,6 +802,20 @@ class Controller(Node):
         """
         self.poly.stop()
         self.delete()
+
+    def _convertDrivers(self, drivers):
+        return deepcopy(drivers)
+        """
+        if isinstance(drivers, list):
+            newFormat = {}
+            for driver in drivers:
+                newFormat[driver['driver']] = {}
+                newFormat[driver['driver']]['value'] = driver['value']
+                newFormat[driver['driver']]['uom'] = driver['uom']
+            return newFormat
+        else:    
+            return deepcopy(drivers)
+        """
 
     def delete(self):
         """
@@ -842,7 +878,7 @@ class Controller(Node):
 
     def runForever(self):
         for thread in self._threads:
-            thread.join()
+            self._threads[thread].join()
 
     def start(self):
         pass
@@ -881,17 +917,14 @@ class Controller(Node):
         return params.get(data)
 
     def addNotice(self, data, key=None):
-        try:  # check whether python knows about 'basestring'
-            basestring
-        except NameError:  # no, it doesn't (it's Python3); use 'str' instead
-            basestring = str
-        if not isinstance(data, basestring):
-            LOGGER.error('addNotice: data isn\'t a string. Ignoring.')
+        if not isinstance(data, dict):
+            self.poly.addNotice({ 'key': key, 'value': data})
         else:
-            if (self.poly.supports_feature('noticeByKey')):
-                self.poly.addNotice({ 'key': key, 'value': data})
-            else:
+            if 'value' in data:
                 self.poly.addNotice(data)
+            else:
+                for key, value in data.items():
+                    self.poly.addNotice({ 'key': key, 'value': value })
 
     def removeNotice(self, key):
         if (self.poly.supports_feature('noticeByKey')):
