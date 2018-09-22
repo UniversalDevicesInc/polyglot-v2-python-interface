@@ -877,8 +877,7 @@ class Controller(Node):
             self.nodes[node].reportDrivers()
 
     def runForever(self):
-        for thread in self._threads:
-            self._threads[thread].join()
+        self._threads['input'].join()
 
     def start(self):
         pass
