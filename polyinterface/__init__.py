@@ -1,4 +1,4 @@
-__version__ = '2.0.28'
+__version__ = '2.0.29'
 __description__ = 'UDI Polyglot v2 Interface'
 __url__ = 'https://github.com/UniversalDevicesInc/polyglot-v2-python-interface'
 __author__ = 'James Milne'
