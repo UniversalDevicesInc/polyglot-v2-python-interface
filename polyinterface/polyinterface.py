@@ -7,6 +7,7 @@ by Einstein.42 (James Milne) milne.james@gmail.com
 from copy import deepcopy
 from dotenv import load_dotenv
 import json
+import ssl
 import logging
 import logging.handlers
 import __main__ as main
@@ -162,14 +163,19 @@ class Interface(object):
             self.useSecure = os.environ['USE_HTTPS']
         if self.useSecure is True:
             if 'MQTT_CERTPATH' in os.environ:
-                self._mqttc.tls_set(os.environ['MQTT_CERTPATH'] + '/polyglot.crt',
-                    os.environ['MQTT_CERTPATH'] + '/client.crt',
-                    os.environ['MQTT_CERTPATH'] + '/client_private.key')
+                self._mqttc.tls_set(
+                    ca_certs=os.environ['MQTT_CERTPATH'] + '/polyglot.crt',
+                    certfile=os.environ['MQTT_CERTPATH'] + '/client.crt',
+                    keyfile=os.environ['MQTT_CERTPATH'] + '/client_private.key',
+                    tls_version=ssl.PROTOCOL_TLSv1_2)
             else:
-                self._mqttc.tls_set(join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
-                    join(expanduser("~") + '/.polyglot/ssl/client.crt'),
-                    join(expanduser("~") + '/.polyglot/ssl/client_private.key'))
-        # self._mqttc.tls_insecure_set(True)
+                self._mqttc.tls_set(
+                    ca_certs=join(expanduser("~") + '/.polyglot/ssl/polyglot.crt'),
+                    certfile=join(expanduser("~") + '/.polyglot/ssl/client.crt'),
+                    keyfile=join(expanduser("~") + '/.polyglot/ssl/client_private.key'),
+                    tls_version=ssl.PROTOCOL_TLSv1_2
+                    )
+        self._mqttc.tls_insecure_set(True)
         self.config = None
         # self.loop = asyncio.new_event_loop()
         self.loop = None
