@@ -34,3 +34,6 @@ When you start building a NodeServer you are helping build the free and open Int
 To get started, [use the python2/3 template.](https://github.com/Einstein42/udi-poly-template-python)
 
 From there just read the code itself, it is fully explained step by step.
+
+### How to Enable your NodeServer in the Cloud
+[Link to PGC Interface](https://github.com/UniversalDevicesInc/pgc-python-interface/blob/master/README.md)

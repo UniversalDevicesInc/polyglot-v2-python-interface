@@ -1,5 +1,12 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.29
+* TLS 1.3 bypass (for now)
+* Better thread handling
+* Nicer log format with Thread Name
+* MainThread loop MQTT disconnect avoidance
+* PGC init compatibility
+
 ### Version 2.0.28
 * Log propagaion fix
 * Typed parameters
