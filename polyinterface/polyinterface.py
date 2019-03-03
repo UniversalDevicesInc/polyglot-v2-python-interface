@@ -25,8 +25,6 @@ import select
 from threading import Thread
 import warnings
 
-from polyinterface import __features__
-
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
@@ -234,8 +232,7 @@ class Interface(object):
             self._mqttc.publish(self.topicSelfConnection, json.dumps(
                 {
                     'connected': True,
-                    'node': self.profileNum,
-                    'features': __features__
+                    'node': self.profileNum
                 }), retain=True)
             LOGGER.info('Sent Connected message to Polyglot')
         else:
@@ -377,7 +374,8 @@ class Interface(object):
                     'name': node.name,
                     'node_def_id': node.id,
                     'primary': node.primary,
-                    'drivers': node.drivers
+                    'drivers': node.drivers,
+                    'hint': node.hint
                 }]
             }
         }
@@ -485,15 +483,7 @@ class Interface(object):
         self.inQueue.put(command)
 
     def supports_feature(self, feature):
-        if self.config is None:
-            return False
-
-        feature_support = self.config.get('features', {}).get(feature, 'off')
-        if feature_support == 'deprecated':
-            LOGGER.warning('Deprecated feature detected {}. Update interface and node server.'.format(feature))
-            return True
-
-        return feature_support == 'on'
+        return True
 
     def get_md_file_data(self, fileName):
         data = ''
@@ -503,9 +493,6 @@ class Interface(object):
         return data
 
     def send_custom_config_docs(self):
-        if not self.supports_feature('customParamsDoc'):
-            return
-
         data = ''
         if not self.custom_params_docs_file_sent:
             data = self.get_md_file_data(Interface.CUSTOM_CONFIG_DOCS_FILE_NAME)
@@ -683,6 +670,7 @@ class Node(object):
     commands = {}
     drivers = []
     sends = {}
+    hint = [ 0, 0, 0, 0 ]
 
 
 class Controller(Node):
@@ -691,7 +679,7 @@ class Controller(Node):
     """
     __exists = False
 
-    def __init__(self, poly):
+    def __init__(self, poly, name='Controller'):
         if self.__exists:
             warnings.warn('Only one Controller is allowed.')
             return
@@ -701,7 +689,7 @@ class Controller(Node):
             self.poly = poly
             self.poly.onConfig(self._gotConfig)
             self.poly.onStop(self.stop)
-            self.name = 'Controller'
+            self.name = name
             self.address = 'controller'
             self.primary = self.address
             self._drivers = deepcopy(self.drivers)
@@ -926,17 +914,7 @@ class Controller(Node):
                     self.poly.addNotice({ 'key': key, 'value': value })
 
     def removeNotice(self, key):
-        if (self.poly.supports_feature('noticeByKey')):
-            data = { 'key': str(key) }
-        else:
-            if not isinstance(key, int):
-                LOGGER.error('removeNotice: key isn\'t a int. Ignoring.')
-                return
-            try:
-                data = self.poly.config['notices'][key]
-            except (IndexError) as err:
-                LOGGER.error('Notices doesn\'t have an element at index {} ignoring. {}'.format(data, err), exc_info=True)
-                return
+        data = { 'key': str(key) }
         self.poly.removeNotice(data)
 
     def getNotices(self):
