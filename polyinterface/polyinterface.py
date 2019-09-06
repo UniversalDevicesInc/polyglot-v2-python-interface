@@ -25,6 +25,12 @@ import select
 from threading import Thread
 import warnings
 
+PY2 = sys.version_info[0] == 2
+
+if PY2:
+    string_types = basestring,
+else:
+    string_types = str,
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
@@ -35,8 +41,11 @@ class LoggerWriter(object):
         self.level = level
 
     def write(self, message):
-        if not re.match(r'^\s*$', message):
-            self.level(message.strip())
+        if isinstance(message, string_types):
+            if not re.match(r'^\s*$', message):
+                self.level(message.strip())
+        else:
+            self.level('ERROR: message was not a string: {}'.format(message))
 
     def flush(self):
         pass
@@ -574,7 +583,7 @@ class Node(object):
                 newFormat[driver['driver']]['value'] = driver['value']
                 newFormat[driver['driver']]['uom'] = driver['uom']
             return newFormat
-        else:    
+        else:
             return deepcopy(drivers)
         """
 
@@ -801,7 +810,7 @@ class Controller(Node):
                 newFormat[driver['driver']]['value'] = driver['value']
                 newFormat[driver['driver']]['uom'] = driver['uom']
             return newFormat
-        else:    
+        else:
             return deepcopy(drivers)
         """
 
