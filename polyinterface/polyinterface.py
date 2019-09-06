@@ -28,9 +28,9 @@ import warnings
 PY2 = sys.version_info[0] == 2
 
 if PY2:
-    string_types = basestring,
+    string_types = basestring
 else:
-    string_types = str,
+    string_types = str
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
