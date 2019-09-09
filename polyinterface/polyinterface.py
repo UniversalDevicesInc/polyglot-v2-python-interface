@@ -24,24 +24,17 @@ import sys
 import select
 from threading import Thread
 import warnings
-
-PY2 = sys.version_info[0] == 2
-
-if PY2:
-    string_types = basestring
-else:
-    string_types = str
+import time
 
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
-
 
 class LoggerWriter(object):
     def __init__(self, level):
         self.level = level
 
     def write(self, message):
-        if isinstance(message, string_types):
+        if type(message) == type('') or type(message) == type(u'') or type(message) == type(b''):
             if not re.match(r'^\s*$', message):
                 self.level(message.strip())
         else:
@@ -325,14 +318,22 @@ class Interface(object):
         and publishes the connected message.
         """
         LOGGER.info('Connecting to MQTT... {}:{}'.format(self._server, self._port))
-        try:
-            # self._mqttc.connect_async(str(self._server), int(self._port), 10)
-            self._mqttc.connect_async('{}'.format(self._server), int(self._port), 10)
-            self._mqttc.loop_forever()
-        except Exception as ex:
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            LOGGER.error("MQTT Connection error: {}".format(message), exc_info=True)
+        done = False
+        while not done:
+            try:
+                # self._mqttc.connect_async(str(self._server), int(self._port), 10)
+                self._mqttc.connect_async('{}'.format(self._server), int(self._port), 10)
+                self._mqttc.loop_forever()
+                done = True
+            except SSLError:
+                LOGGER.error("MQTT Connection SSLError: {}", exc_info=True)
+                LOGGER.error("Will retry in a few seconds")
+                time.sleep(3)
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                LOGGER.error("MQTT Connection error: {}".format(message), exc_info=True)
+                done = True
 
     def stop(self):
         """
