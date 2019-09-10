@@ -69,3 +69,5 @@ target/
 .ipynb_checkpoints
 .idea/
 
+#Crapple
+.AppleDouble

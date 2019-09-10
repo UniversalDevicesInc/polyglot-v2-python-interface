@@ -26,6 +26,13 @@ from threading import Thread
 import warnings
 import time
 
+PY2 = sys.version_info[0] == 2
+
+if PY2:
+    string_types = basestring
+else:
+    string_types = str
+
 def warning_on_one_line(message, category, filename, lineno, file=None, line=None):
     return '{}:{}: {}: {}'.format(filename, lineno, category.__name__, message)
 
@@ -34,7 +41,8 @@ class LoggerWriter(object):
         self.level = level
 
     def write(self, message):
-        if type(message) == type('') or type(message) == type(u'') or type(message) == type(b''):
+        if isinstance(message, string_types):
+            # It's a string !!
             if not re.match(r'^\s*$', message):
                 self.level(message.strip())
         else:
