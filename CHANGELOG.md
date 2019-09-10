@@ -1,5 +1,9 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.30 (Not released yet)
+* Stack Overflow fix https://github.com/UniversalDevicesInc/polyglot-v2/issues/8
+* SSLError fix fixed https://github.com/UniversalDevicesInc/polyglot-v2/issues/13
+
 ### Version 2.0.29
 * TLS 1.3 bypass (for now)
 * Better thread handling
