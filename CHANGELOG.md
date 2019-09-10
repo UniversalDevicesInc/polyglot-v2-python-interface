@@ -1,6 +1,7 @@
 # __Changelog for Polyglot Python Interface v2__
 
 ### Version 2.0.30 (Not released yet)
+* Removed features
 * Stack Overflow fix https://github.com/UniversalDevicesInc/polyglot-v2/issues/8
 * SSLError fix fixed https://github.com/UniversalDevicesInc/polyglot-v2/issues/13
 
