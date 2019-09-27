@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Python Interface for UDI Polyglot v2 NodeServers
 by Einstein.42 (James Milne) milne.james@gmail.com
