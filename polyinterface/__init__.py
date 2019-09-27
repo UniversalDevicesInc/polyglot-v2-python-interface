@@ -1,4 +1,4 @@
-from .polyinterface import Interface, Node, Controller, LOGGER, unload_interface
+from .polyinterface import PolyInterface, Interface, Node, Controller, LOGGER, unload_interface
 
 __version__ = '2.0.31'
 __description__ = 'UDI Polyglot v2 Interface'
