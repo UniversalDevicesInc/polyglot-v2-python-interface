@@ -12,7 +12,7 @@ setup(name='polyinterface',
     author=metadata['author'],
     author_email=metadata['authoremail'],
     license=metadata['license'],
-    packages=find_packages(),
+    packages=find_packages(where=".polyinterface"),
     install_requires=[
         "paho-mqtt",
         "python-dotenv",
