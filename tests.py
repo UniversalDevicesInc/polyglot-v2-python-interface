@@ -12,7 +12,7 @@ class TestPoly(TestCase):
 
 class TestPolyInstance(TestCase):
 
-    @mock.patch.dict(os.environ,{'PROFILE_NUM':'1234'})
+    @mock.patch.dict(os.environ,{'PROFILE_NUM':'1234', 'USE_HTTPS':'false'})
     def setUp(self):
         self.polyglot = Interface('Test')
 
