@@ -5,7 +5,7 @@ python:
 install: python setup.py install
 before_script:
 - 'mkdir ~/.polyglot && printf "Test=1\nUSE_HTTPS=false" > ~/.polyglot/.env'
-script: python tests.py
+script: python setup.py test
 notifications:
   slack:
     secure: RlFVwpMtWT0Txv2Xu2yC/Cm2jhdD3dKM9rbTcqnnc3Pi6JKBPEPOc9WQid4PGL0g+wTypPRMIlOYsC76Umddq+uc8SuoIMjBy2PIyuTHED4P7QN5pskYiVJvj0zst/oZ3XRrArCCFtKXsC+T8hsdFMPOjHoMM0JyKEah0X2PjMTppYwTcCr/NfUwxlV+fCXqOmUG373aVNLHwDE1LAL1BcT/6aLZ2NFcNJRkESXpxDoe7de2IquvVnwCbqft20VYtiLpb6mLzs/BlRZObfuq3OuLjAOFC9gl/I0DFGs3xibz19WVCYpwHKOU/oE0aovWV9T6/UHoxjQ4MdPUt+8F8+OXWrf8uuMblCTwRDbxIRtkB/Wi8WxzyXHgv+Gxz45OTX5JinGgOidI3xO3xlNCI119iLCQ8vm7B2nmuh7BJ2F62w9qeOuLYYh1M/2GOZ/Qz0xVb1w2NuqPJkiSOUlB1+KrNeoCpN6vIsc7Unvwh3OA3ZQtJv233jq9LCW24WGNbRf8eOqLpJfKDdvbV/mtNnLVxqmpIpvR9GwXFNC/o3m8TLE2EqD8z+18H6dBgtt4jSeFjWnNXOK+Y9ZULOnmugFotLIDvPP+WBb1yWF8azUBhku3HCUeBmaLiIuu7C2wpO4UBX42f/uw0mA+HUz6yLlPCC9U2gJ85xVE/M7NN5M=

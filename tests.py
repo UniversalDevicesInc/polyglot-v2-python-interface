@@ -18,7 +18,3 @@ class TestPolyInstance(TestCase):
 
     def test_init(self):
         self.assertIsInstance(self.polyglot, Interface)
-
-
-if __name__ == "__main__":
-    unittest.main()
