@@ -202,6 +202,11 @@ class Interface(object):
         Interface.__exists = True
         self.custom_params_docs_file_sent = False
         self.custom_params_pending_docs = ''
+        try:
+            self.network_interface = self.get_network_interface()
+            LOGGER.info('Connect: Network Interface: {}'.format(self.network_interface))
+        except:
+            LOGGER.error('Failed to determin Network Interface', exc_info=True)
 
     def onConfig(self, callback):
         """
@@ -226,7 +231,6 @@ class Interface(object):
         :param flags: The flags set on the connection.
         :param rc: Result code of connection, 0 = Success, anything else is a failure
         """
-        LOGGER.info('Connect: My IP {} BCAST {}'.format(self.ip,self.bcast))
         if rc == 0:
             self.connected = True
             results = []
@@ -561,41 +565,23 @@ class Interface(object):
         message = { 'typedparams': data }
         self.send(message)
 
-    def get_network_interface(interface='default',logger=None):
+    """
+        Returns the network interface which contains addr, bcast elements
+    """
+    def get_network_interface(self,interface='default'):
         # Get the default gateway
         gws = netifaces.gateways()
+        LOGGER.debug("gws: {}".format(gws))
         rt = False
         if interface in gws:
             gwd = gws[interface][netifaces.AF_INET]
-            logger.debug("gwd: {}={}".format(interface,gwd))
+            LOGGER.debug("gw: {}={}".format(interface,gwd))
             ifad = netifaces.ifaddresses(gwd[1])
             rt = ifad[netifaces.AF_INET]
-            logger.debug("ifad: {}={}".format(gwd[1],rt))
-        else:
-            logger.error("No {} in gateways:{}".format(interface,gateways))
-        return rt
-
-
-    def get_network_ip(logger=None):
-        try:
-            iface = get_network_interface(logger=logger)
-            rt = iface[0]['addr']
-        except Exception as err:
-            logger.error('get_network_ip: failed: {0}'.format(err))
-            rt = False
-        logger.info('get_network_ip: Returning {0}'.format(rt))
-        return rt
-
-    def get_network_bcast(logger=None):
-        try:
-            iface = get_network_interface(logger=logger)
-            rt = iface[0]['broadcast']
-        except Exception as err:
-            logger.error('get_network_bcast: failed: {0}'.format(err))
-            rt = False
-        logger.info('get_network_bcast: Returning {0}'.format(rt))
-        return rt
-
+            LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
+            return rt[0]
+        LOGGER.error("No {} in gateways:{}".format(interface,gws))
+        return {'addr': False, 'broadcast': False, 'netmast': False}
 
 class Node(object):
     """
