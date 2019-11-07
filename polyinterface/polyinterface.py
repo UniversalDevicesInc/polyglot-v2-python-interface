@@ -566,7 +566,7 @@ class Interface(object):
         self.send(message)
 
     """
-        Returns the network interface which contains addr, bcast elements
+        Returns the network interface which contains addr, broadcase, and netmask elements
     """
     def get_network_interface(self,interface='default'):
         # Get the default gateway
@@ -581,7 +581,7 @@ class Interface(object):
             LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
             return rt[0]
         LOGGER.error("No {} in gateways:{}".format(interface,gws))
-        return {'addr': False, 'broadcast': False, 'netmast': False}
+        return {'addr': False, 'broadcast': False, 'netmask': False}
 
 class Node(object):
     """
