@@ -206,7 +206,7 @@ class Interface(object):
             self.network_interface = self.get_network_interface()
             LOGGER.info('Connect: Network Interface: {}'.format(self.network_interface))
         except:
-            LOGGER.error('Failed to determin Network Interface', exc_info=True)
+            LOGGER.error('Failed to determine Network Interface', exc_info=True)
 
     def onConfig(self, callback):
         """
@@ -566,7 +566,7 @@ class Interface(object):
         self.send(message)
 
     """
-        Returns the network interface which contains addr, broadcase, and netmask elements
+        Returns the network interface which contains addr, broadcasts, and netmask elements
     """
     def get_network_interface(self,interface='default'):
         # Get the default gateway
