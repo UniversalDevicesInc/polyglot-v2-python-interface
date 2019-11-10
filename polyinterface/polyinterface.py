@@ -25,6 +25,7 @@ import select
 from threading import Thread
 import warnings
 import time
+import netifaces
 
 PY2 = sys.version_info[0] == 2
 
@@ -201,6 +202,11 @@ class Interface(object):
         Interface.__exists = True
         self.custom_params_docs_file_sent = False
         self.custom_params_pending_docs = ''
+        try:
+            self.network_interface = self.get_network_interface()
+            LOGGER.info('Connect: Network Interface: {}'.format(self.network_interface))
+        except:
+            LOGGER.error('Failed to determine Network Interface', exc_info=True)
 
     def onConfig(self, callback):
         """
@@ -559,6 +565,23 @@ class Interface(object):
         message = { 'typedparams': data }
         self.send(message)
 
+    """
+        Returns the network interface which contains addr, broadcasts, and netmask elements
+    """
+    def get_network_interface(self,interface='default'):
+        # Get the default gateway
+        gws = netifaces.gateways()
+        LOGGER.debug("gws: {}".format(gws))
+        rt = False
+        if interface in gws:
+            gwd = gws[interface][netifaces.AF_INET]
+            LOGGER.debug("gw: {}={}".format(interface,gwd))
+            ifad = netifaces.ifaddresses(gwd[1])
+            rt = ifad[netifaces.AF_INET]
+            LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
+            return rt[0]
+        LOGGER.error("No {} in gateways:{}".format(interface,gws))
+        return {'addr': False, 'broadcast': False, 'netmask': False}
 
 class Node(object):
     """
