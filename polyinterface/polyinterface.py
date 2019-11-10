@@ -52,7 +52,6 @@ class LoggerWriter(object):
     def flush(self):
         pass
 
-
 def setup_log():
     # Log Location
     # path = os.path.dirname(sys.argv[0])
@@ -83,6 +82,25 @@ def setup_log():
 
 LOGGER = setup_log()
 
+def get_network_interface(interface='default'):
+        """
+        Returns the network interface which contains addr, broadcasts, and netmask elements
+
+        :param interface: The interface name to check, default grabs
+        """
+        # Get the default gateway
+        gws = netifaces.gateways()
+        LOGGER.debug("gws: {}".format(gws))
+        rt = False
+        if interface in gws:
+            gwd = gws[interface][netifaces.AF_INET]
+            LOGGER.debug("gw: {}={}".format(interface,gwd))
+            ifad = netifaces.ifaddresses(gwd[1])
+            rt = ifad[netifaces.AF_INET]
+            LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
+            return rt[0]
+        LOGGER.error("No {} in gateways:{}".format(interface,gws))
+        return {'addr': False, 'broadcast': False, 'netmask': False}
 
 def init_interface():
     sys.stdout = LoggerWriter(LOGGER.debug)
@@ -567,24 +585,7 @@ class Interface(object):
         self.send(message)
 
     def get_network_interface(self,interface='default'):
-        """
-        Returns the network interface which contains addr, broadcasts, and netmask elements
-
-        :param interface: The interface name to check, default grabs
-        """
-        # Get the default gateway
-        gws = netifaces.gateways()
-        LOGGER.debug("gws: {}".format(gws))
-        rt = False
-        if interface in gws:
-            gwd = gws[interface][netifaces.AF_INET]
-            LOGGER.debug("gw: {}={}".format(interface,gwd))
-            ifad = netifaces.ifaddresses(gwd[1])
-            rt = ifad[netifaces.AF_INET]
-            LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
-            return rt[0]
-        LOGGER.error("No {} in gateways:{}".format(interface,gws))
-        return {'addr': False, 'broadcast': False, 'netmask': False}
+        return get_network_interface(interface=interface)
 
     def get_server_data(self,check_profile=True):
         """
