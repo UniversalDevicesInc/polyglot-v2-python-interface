@@ -132,6 +132,7 @@ def unload_interface():
 class Interface(object):
 
     CUSTOM_CONFIG_DOCS_FILE_NAME = 'POLYGLOT_CONFIG.md'
+    SERVER_JSON_FILE_NAME = 'server.json';
 
     """
     Polyglot Interface Class
@@ -582,6 +583,61 @@ class Interface(object):
             return rt[0]
         LOGGER.error("No {} in gateways:{}".format(interface,gws))
         return {'addr': False, 'broadcast': False, 'netmask': False}
+
+    """
+    get_server_data: Loads the server.json and returns as a dict
+    check_profile=True will run the check_profile method
+    """
+    def get_server_data(self,check_profile=True):
+        serverdata = {'version': 'unknown'}
+        # Read the SERVER info from the json.
+        try:
+            with open(Interface.SERVER_JSON_FILE_NAME) as data:
+                serverdata = json.load(data)
+        except Exception as err:
+            LOGGER.error('get_server_data: failed to read file {0}: {1}'.format(Interface.SERVER_JSON_FILE_NAME,err), exc_info=True)
+            return serverdata
+        data.close()
+        # Get the version info
+        try:
+            version = serverdata['credits'][0]['version']
+        except (KeyError, ValueError):
+            LOGGER.info('Version (credits[0][version]) not found in server.json.')
+            version = '0.0.0.0'
+        serverdata['version'] = version
+        if not 'profile_version' in serverdata:
+            serverdata['profile_version'] = None
+        LOGGER.debug('get_server_data: {}'.format(serverdata))
+        if check_profile:
+            self.check_profile(serverdata)
+        return serverdata
+
+    """
+    Check if the profile is up to date by comparing the server.json profile_version
+    against the profile_version stored in the db cunstomData
+    The profile will be installed if necessary.
+    """
+    def check_profile(self,serverdata):
+        cdata = deepcopy(self.config['customData'])
+        LOGGER.debug('check_profile:      customData={}'.format(cdata))
+        LOGGER.debug('check_profile: profile_version={}'.format(serverdata['profile_version']))
+        if serverdata['profile_version'] is None:
+            LoGGER.info('check_profile: Ignoring since nodeserver does not have profile_version')
+            return
+        update_profile = False
+        if not 'profile_version' in cdata:
+            LOGGER.info('check_profile: Updated needed since it has never been recorded.')
+            update_profile = True
+        elif serverdata['profile_version'] == cdata['profile_version']:
+            LOGGER.info('check_profile: No updated needed: "{}" == "{}"'.format(serverdata['profile_version'],cdata['profile_version']))
+            update_profile = False
+        else:
+            LOGGER.info('check_profile: Updated needed: "{}" == "{}"'.format(serverdata['profile_version'],cdata['profile_version']))
+            update_profile = True
+        if update_profile:
+            st = self.installprofile()
+            cdata['profile_version'] = serverdata['profile_version']
+            self.saveCustomData(cdata)
 
 class Node(object):
     """
