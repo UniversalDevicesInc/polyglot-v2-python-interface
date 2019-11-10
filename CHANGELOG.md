@@ -1,5 +1,12 @@
 # __Changelog for Polyglot Python Interface v2__
 
+
+### Version 2.0.33
+* Added Added get_server_data and check_profile poly methods
+
+### Version 2.0.32
+* Added get_network_interface method
+
 ### Version 2.0.31
 * Removed features
 * Stack Overflow fix https://github.com/UniversalDevicesInc/polyglot-v2/issues/8
