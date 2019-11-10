@@ -566,10 +566,12 @@ class Interface(object):
         message = { 'typedparams': data }
         self.send(message)
 
-    """
-        Returns the network interface which contains addr, broadcasts, and netmask elements
-    """
     def get_network_interface(self,interface='default'):
+        """
+        Returns the network interface which contains addr, broadcasts, and netmask elements
+
+        :param interface: The interface name to check, default grabs
+        """
         # Get the default gateway
         gws = netifaces.gateways()
         LOGGER.debug("gws: {}".format(gws))
@@ -584,11 +586,11 @@ class Interface(object):
         LOGGER.error("No {} in gateways:{}".format(interface,gws))
         return {'addr': False, 'broadcast': False, 'netmask': False}
 
-    """
-    get_server_data: Loads the server.json and returns as a dict
-    check_profile=True will run the check_profile method
-    """
     def get_server_data(self,check_profile=True):
+        """
+        get_server_data: Loads the server.json and returns as a dict
+        :param check_profile: Calls the check_profile method if True
+        """
         serverdata = {'version': 'unknown'}
         # Read the SERVER info from the json.
         try:
@@ -612,12 +614,12 @@ class Interface(object):
             self.check_profile(serverdata)
         return serverdata
 
-    """
-    Check if the profile is up to date by comparing the server.json profile_version
-    against the profile_version stored in the db cunstomData
-    The profile will be installed if necessary.
-    """
     def check_profile(self,serverdata):
+        """
+        Check if the profile is up to date by comparing the server.json profile_version
+        against the profile_version stored in the db customData
+        The profile will be installed if necessary.
+        """
         cdata = deepcopy(self.config['customData'])
         LOGGER.debug('check_profile:      customData={}'.format(cdata))
         LOGGER.debug('check_profile: profile_version={}'.format(serverdata['profile_version']))
