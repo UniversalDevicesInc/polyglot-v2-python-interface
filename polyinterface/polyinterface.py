@@ -52,7 +52,6 @@ class LoggerWriter(object):
     def flush(self):
         pass
 
-
 def setup_log():
     # Log Location
     # path = os.path.dirname(sys.argv[0])
@@ -83,6 +82,25 @@ def setup_log():
 
 LOGGER = setup_log()
 
+def get_network_interface(interface='default'):
+        """
+        Returns the network interface which contains addr, broadcasts, and netmask elements
+
+        :param interface: The interface name to check, default grabs
+        """
+        # Get the default gateway
+        gws = netifaces.gateways()
+        LOGGER.debug("gws: {}".format(gws))
+        rt = False
+        if interface in gws:
+            gwd = gws[interface][netifaces.AF_INET]
+            LOGGER.debug("gw: {}={}".format(interface,gwd))
+            ifad = netifaces.ifaddresses(gwd[1])
+            rt = ifad[netifaces.AF_INET]
+            LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
+            return rt[0]
+        LOGGER.error("No {} in gateways:{}".format(interface,gws))
+        return {'addr': False, 'broadcast': False, 'netmask': False}
 
 def init_interface():
     sys.stdout = LoggerWriter(LOGGER.debug)
@@ -132,6 +150,7 @@ def unload_interface():
 class Interface(object):
 
     CUSTOM_CONFIG_DOCS_FILE_NAME = 'POLYGLOT_CONFIG.md'
+    SERVER_JSON_FILE_NAME = 'server.json';
 
     """
     Polyglot Interface Class
@@ -565,23 +584,63 @@ class Interface(object):
         message = { 'typedparams': data }
         self.send(message)
 
-    """
-        Returns the network interface which contains addr, broadcasts, and netmask elements
-    """
     def get_network_interface(self,interface='default'):
-        # Get the default gateway
-        gws = netifaces.gateways()
-        LOGGER.debug("gws: {}".format(gws))
-        rt = False
-        if interface in gws:
-            gwd = gws[interface][netifaces.AF_INET]
-            LOGGER.debug("gw: {}={}".format(interface,gwd))
-            ifad = netifaces.ifaddresses(gwd[1])
-            rt = ifad[netifaces.AF_INET]
-            LOGGER.debug("ifad: {}={}".format(gwd[1],rt))
-            return rt[0]
-        LOGGER.error("No {} in gateways:{}".format(interface,gws))
-        return {'addr': False, 'broadcast': False, 'netmask': False}
+        return get_network_interface(interface=interface)
+
+    def get_server_data(self,check_profile=True):
+        """
+        get_server_data: Loads the server.json and returns as a dict
+        :param check_profile: Calls the check_profile method if True
+        """
+        serverdata = {'version': 'unknown'}
+        # Read the SERVER info from the json.
+        try:
+            with open(Interface.SERVER_JSON_FILE_NAME) as data:
+                serverdata = json.load(data)
+        except Exception as err:
+            LOGGER.error('get_server_data: failed to read file {0}: {1}'.format(Interface.SERVER_JSON_FILE_NAME,err), exc_info=True)
+            return serverdata
+        data.close()
+        # Get the version info
+        try:
+            version = serverdata['credits'][0]['version']
+        except (KeyError, ValueError):
+            LOGGER.info('Version (credits[0][version]) not found in server.json.')
+            version = '0.0.0.0'
+        serverdata['version'] = version
+        if not 'profile_version' in serverdata:
+            serverdata['profile_version'] = None
+        LOGGER.debug('get_server_data: {}'.format(serverdata))
+        if check_profile:
+            self.check_profile(serverdata)
+        return serverdata
+
+    def check_profile(self,serverdata):
+        """
+        Check if the profile is up to date by comparing the server.json profile_version
+        against the profile_version stored in the db customData
+        The profile will be installed if necessary.
+        """
+        cdata = deepcopy(self.config['customData'])
+        LOGGER.debug('check_profile:      customData={}'.format(cdata))
+        LOGGER.debug('check_profile: profile_version={}'.format(serverdata['profile_version']))
+        if serverdata['profile_version'] is None:
+            LoGGER.info('check_profile: Ignoring since nodeserver does not have profile_version')
+            return
+        update_profile = False
+        if not 'profile_version' in cdata:
+            LOGGER.info('check_profile: Updated needed since it has never been recorded.')
+            update_profile = True
+        elif serverdata['profile_version'] == cdata['profile_version']:
+            LOGGER.info('check_profile: No updated needed: "{}" == "{}"'.format(serverdata['profile_version'],cdata['profile_version']))
+            update_profile = False
+        else:
+            LOGGER.info('check_profile: Updated needed: "{}" == "{}"'.format(serverdata['profile_version'],cdata['profile_version']))
+            update_profile = True
+        if update_profile:
+            st = self.installprofile()
+            cdata['profile_version'] = serverdata['profile_version']
+            self.saveCustomData(cdata)
 
 class Node(object):
     """
