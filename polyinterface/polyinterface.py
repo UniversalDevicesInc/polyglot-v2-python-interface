@@ -290,7 +290,7 @@ class Interface(object):
                     return
                 del parsed_msg['node']
                 for key in parsed_msg:
-                    # LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
+                    LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
                     if key == 'config':
                         self.inConfig(parsed_msg[key])
                     elif key == 'connected':
@@ -302,7 +302,8 @@ class Interface(object):
                         self.input(parsed_msg)
                     else:
                         LOGGER.error('Invalid command received in message from Polyglot: {}'.format(key))
-
+            else:
+                LOGGER.error('MQTT Received Unknown Message: {}: {}'.format(msg.topic, parsed_msg))
         except (ValueError) as err:
             LOGGER.error('MQTT Received Payload Error: {}'.format(err), exc_info=True)
 
