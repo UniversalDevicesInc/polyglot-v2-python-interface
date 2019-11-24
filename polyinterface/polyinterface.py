@@ -306,6 +306,11 @@ class Interface(object):
                 LOGGER.error('MQTT Received Unknown Message: {}: {}'.format(msg.topic, parsed_msg))
         except (ValueError) as err:
             LOGGER.error('MQTT Received Payload Error: {}'.format(err), exc_info=True)
+        except Exception as ex:
+            # Can any other exception happen?
+            template = "An exception of type {0} occured. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            LOGGER.error("MQTT Received Unknown Error: " + message, exc_info=True)
 
     def _disconnect(self, mqttc, userdata, rc):
         """
@@ -329,17 +334,17 @@ class Interface(object):
 
     def _log(self, mqttc, userdata, level, string):
         """ Use for debugging MQTT Packets, disable for normal use, NOISY. """
-        # LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
+        LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
         pass
 
     def _subscribe(self, mqttc, userdata, mid, granted_qos):
         """ Callback for Subscribe message. Unused currently. """
-        # LOGGER.info("MQTT Subscribed Succesfully for Message ID: {} - QoS: {}".format(str(mid), str(granted_qos)))
+        LOGGER.info("MQTT Subscribed Succesfully for Message ID: {} - QoS: {}".format(str(mid), str(granted_qos)))
         pass
 
     def _publish(self, mqttc, userdata, mid):
         """ Callback for publish message. Unused currently. """
-        # LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
+        LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
         pass
 
     def start(self):
@@ -368,6 +373,7 @@ class Interface(object):
                 message = template.format(type(ex).__name__, ex.args)
                 LOGGER.error("MQTT Connection error: {}".format(message), exc_info=True)
                 done = True
+        LOGGER.debug("MQTT Done:")
 
     def stop(self):
         """
