@@ -250,8 +250,8 @@ class Interface(object):
         :param flags: The flags set on the connection.
         :param rc: Result code of connection, 0 = Success, anything else is a failure
         """
-        if current_thread().name != "MQTT":
-            current_thread().name = "MQTT"
+        if Thread.current_thread().name != "MQTT":
+            Thread.current_thread().name = "MQTT"
         if rc == 0:
             self.connected = True
             results = []
