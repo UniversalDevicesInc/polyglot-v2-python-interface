@@ -138,7 +138,7 @@ def init_interface():
             LOGGER.info('Received Config from STDIN.')
         except (Exception) as err:
             # e = sys.exc_info()[0]
-            LOGGER.error('Invalid formatted input. Skipping. %s', err, exc_info=True)
+            LOGGER.error('Invalid formatted input %s for line: %s', line, err, exc_info=True)
 
 
 def unload_interface():
@@ -166,6 +166,7 @@ class Interface(object):
         if self.__exists:
             warnings.warn('Only one Interface is allowed.')
             return
+        self.config = None
         self.connected = False
         self.profileNum = os.environ.get("PROFILE_NUM")
         if self.profileNum is None:
@@ -207,7 +208,6 @@ class Interface(object):
                     )
         # self._mqttc.tls_insecure_set(True)
         # self._mqttc.enable_logger(logger=LOGGER)
-        self.config = None
         # self.loop = asyncio.new_event_loop()
         self.loop = None
         self.inQueue = queue.Queue()
@@ -630,6 +630,7 @@ class Interface(object):
         against the profile_version stored in the db customData
         The profile will be installed if necessary.
         """
+        LOGGER.debug('check_profile:      config={}'.format(self.config))
         cdata = deepcopy(self.config['customData'])
         LOGGER.debug('check_profile:      customData={}'.format(cdata))
         LOGGER.debug('check_profile: profile_version={}'.format(serverdata['profile_version']))
