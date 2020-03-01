@@ -22,7 +22,7 @@ except ImportError:
 import re
 import sys
 import select
-from threading import Thread
+from threading import Thread,current_thread
 import warnings
 import time
 import netifaces
@@ -250,8 +250,8 @@ class Interface(object):
         :param flags: The flags set on the connection.
         :param rc: Result code of connection, 0 = Success, anything else is a failure
         """
-        if Thread.current_thread().name != "MQTT":
-            Thread.current_thread().name = "MQTT"
+        if current_thread().name != "MQTT":
+            current_thread().name = "MQTT"
         if rc == 0:
             self.connected = True
             results = []
