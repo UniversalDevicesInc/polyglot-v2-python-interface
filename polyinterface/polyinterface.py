@@ -374,9 +374,8 @@ class Interface(object):
                 self._mqttc.connect_async('{}'.format(self._server), int(self._port), 10)
                 self._mqttc.loop_forever()
                 done = True
-            except SSLError:
-                LOGGER.error("MQTT Connection SSLError: {}", exc_info=True)
-                LOGGER.error("Will retry in a few seconds")
+            except ssl.SSLError as e:
+                LOGGER.error("MQTT Connection SSLError: {}, Will retry in a few seconds.".format(e), exc_info=True)
                 time.sleep(3)
             except Exception as ex:
                 template = "An exception of type {0} occurred. Arguments:\n{1!r}"
