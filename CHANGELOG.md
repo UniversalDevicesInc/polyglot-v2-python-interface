@@ -1,5 +1,9 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.35
+- Use logger basicConifg so settings are shared by other modules used by NodeServers
+- Add module to logger, asked all devs for opinions but nobody responded.
+
 ### Version 2.0.34
 * Proper SSLError fix fix https://github.com/UniversalDevicesInc/polyglot-v2/issues/13
 

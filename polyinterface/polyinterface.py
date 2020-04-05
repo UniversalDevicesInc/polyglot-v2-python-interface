@@ -22,11 +22,12 @@ except ImportError:
 import re
 import sys
 import select
-from threading import Thread
+from threading import Thread,current_thread
 import warnings
 import time
 import netifaces
 
+DEBUG = False
 PY2 = sys.version_info[0] == 2
 
 if PY2:
@@ -62,20 +63,24 @@ def setup_log():
 
     # ### Logging Section ################################################################################
     logging.captureWarnings(True)
-    logger = logging.getLogger(__name__)
-    logger.propagate = False
-    warnlog = logging.getLogger('py.warnings')
-    warnings.formatwarning = warning_on_one_line
-    logger.setLevel(log_level)
     # Set the log level to LOG_LEVEL
     # Make a handler that writes to a file,
     # making a new file at midnight and keeping 3 backups
     handler = logging.handlers.TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
     # Format each log message like this
-    formatter = logging.Formatter('%(asctime)s [%(threadName)-10s] [%(levelname)-5s] %(message)s')
+    formatter = logging.Formatter('%(asctime)s [%(threadName)-10s] [%(module)-16s] [%(levelname)-5s] %(message)s')
     # Attach the formatter to the handler
     handler.setFormatter(formatter)
     # Attach the handler to the logger
+    logging.basicConfig(
+        handlers=[handler],
+        level=logging.DEBUG
+    )
+    logger = logging.getLogger(__name__)
+    logger.propagate = False # If True we get duplicates?
+    warnlog = logging.getLogger('py.warnings')
+    warnings.formatwarning = warning_on_one_line
+    logger.setLevel(log_level)
     logger.addHandler(handler)
     warnlog.addHandler(handler)
     return logger
@@ -138,7 +143,7 @@ def init_interface():
             LOGGER.info('Received Config from STDIN.')
         except (Exception) as err:
             # e = sys.exc_info()[0]
-            LOGGER.error('Invalid formatted input. Skipping. %s', err, exc_info=True)
+            LOGGER.error('Invalid formatted input %s for line: %s', line, err, exc_info=True)
 
 
 def unload_interface():
@@ -166,6 +171,7 @@ class Interface(object):
         if self.__exists:
             warnings.warn('Only one Interface is allowed.')
             return
+        self.config = None
         self.connected = False
         self.profileNum = os.environ.get("PROFILE_NUM")
         if self.profileNum is None:
@@ -180,7 +186,8 @@ class Interface(object):
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
         self._threads = {}
         self._threads['socket'] = Thread(target = self._startMqtt, name = 'Interface')
-        self._mqttc = mqtt.Client(envVar, True)
+        LOGGER.info('mqtt Client: name={}'.format(envVar))
+        self._mqttc = mqtt.Client(envVar+self.profileNum, True)
         # self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
         self._mqttc.on_message = self._message
@@ -207,7 +214,6 @@ class Interface(object):
                     )
         # self._mqttc.tls_insecure_set(True)
         # self._mqttc.enable_logger(logger=LOGGER)
-        self.config = None
         # self.loop = asyncio.new_event_loop()
         self.loop = None
         self.inQueue = queue.Queue()
@@ -250,6 +256,8 @@ class Interface(object):
         :param flags: The flags set on the connection.
         :param rc: Result code of connection, 0 = Success, anything else is a failure
         """
+        if current_thread().name != "MQTT":
+            current_thread().name = "MQTT"
         if rc == 0:
             self.connected = True
             results = []
@@ -285,12 +293,15 @@ class Interface(object):
         try:
             inputCmds = ['query', 'command', 'result', 'status', 'shortPoll', 'longPoll', 'delete']
             parsed_msg = json.loads(msg.payload.decode('utf-8'))
+            if DEBUG:
+                LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
             if 'node' in parsed_msg:
                 if parsed_msg['node'] != 'polyglot':
                     return
                 del parsed_msg['node']
                 for key in parsed_msg:
-                    # LOGGER.debug('MQTT Received Message: {}: {}'.format(msg.topic, parsed_msg))
+                    if DEBUG:
+                        LOGGER.debug('MQTT Processing Message: {}: {}'.format(msg.topic, parsed_msg))
                     if key == 'config':
                         self.inConfig(parsed_msg[key])
                     elif key == 'connected':
@@ -302,9 +313,15 @@ class Interface(object):
                         self.input(parsed_msg)
                     else:
                         LOGGER.error('Invalid command received in message from Polyglot: {}'.format(key))
-
+            else:
+                LOGGER.error('MQTT Received Unknown Message: {}: {}'.format(msg.topic, parsed_msg))
         except (ValueError) as err:
             LOGGER.error('MQTT Received Payload Error: {}'.format(err), exc_info=True)
+        except Exception as ex:
+            # Can any other exception happen?
+            template = "An exception of type {0} occured. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            LOGGER.error("MQTT Received Unknown Error: " + message, exc_info=True)
 
     def _disconnect(self, mqttc, userdata, rc):
         """
@@ -328,17 +345,19 @@ class Interface(object):
 
     def _log(self, mqttc, userdata, level, string):
         """ Use for debugging MQTT Packets, disable for normal use, NOISY. """
-        # LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
+        if DEBUG:
+            LOGGER.info('MQTT Log - {}: {}'.format(str(level), str(string)))
         pass
 
     def _subscribe(self, mqttc, userdata, mid, granted_qos):
         """ Callback for Subscribe message. Unused currently. """
-        # LOGGER.info("MQTT Subscribed Succesfully for Message ID: {} - QoS: {}".format(str(mid), str(granted_qos)))
+        LOGGER.info("MQTT Subscribed Succesfully for Message ID: {} - QoS: {}".format(str(mid), str(granted_qos)))
         pass
 
     def _publish(self, mqttc, userdata, mid):
         """ Callback for publish message. Unused currently. """
-        # LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
+        if DEBUG:
+            LOGGER.info("MQTT Published message ID: {}".format(str(mid)))
         pass
 
     def start(self):
@@ -366,6 +385,7 @@ class Interface(object):
                 message = template.format(type(ex).__name__, ex.args)
                 LOGGER.error("MQTT Connection error: {}".format(message), exc_info=True)
                 done = True
+        LOGGER.debug("MQTT Done:")
 
     def stop(self):
         """
@@ -620,6 +640,7 @@ class Interface(object):
         against the profile_version stored in the db customData
         The profile will be installed if necessary.
         """
+        LOGGER.debug('check_profile:      config={}'.format(self.config))
         cdata = deepcopy(self.config['customData'])
         LOGGER.debug('check_profile:      customData={}'.format(cdata))
         LOGGER.debug('check_profile: profile_version={}'.format(serverdata['profile_version']))
