@@ -1,5 +1,7 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.34
+* Proper SSLError fix fix https://github.com/UniversalDevicesInc/polyglot-v2/issues/13
 
 ### Version 2.0.33
 * Added Added get_server_data and check_profile poly methods
