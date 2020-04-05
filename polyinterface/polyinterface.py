@@ -59,6 +59,8 @@ def setup_log():
     if not os.path.exists('./logs'):
         os.makedirs('./logs')
     log_filename = "./logs/debug.log"
+    log_level = logging.DEBUG  # Could be e.g. "DEBUG" or "WARNING"
+
     # ### Logging Section ################################################################################
     logging.captureWarnings(True)
     # Set the log level to LOG_LEVEL
@@ -66,18 +68,19 @@ def setup_log():
     # making a new file at midnight and keeping 3 backups
     handler = logging.handlers.TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
     # Format each log message like this
-    formatter = logging.Formatter('%(asctime)s [%(threadName)-10s] [%(levelname)-5s] %(message)s')
+    formatter = logging.Formatter('%(asctime)s [%(threadName)-10s] [%(module)-16s] [%(levelname)-5s] %(message)s')
     # Attach the formatter to the handler
     handler.setFormatter(formatter)
     # Attach the handler to the logger
     logging.basicConfig(
         handlers=[handler],
-        level=logging.DEBUG # Could be e.g. "DEBUG" or "WARNING"
+        level=logging.DEBUG
     )
     logger = logging.getLogger(__name__)
     logger.propagate = False # If True we get duplicates?
     warnlog = logging.getLogger('py.warnings')
     warnings.formatwarning = warning_on_one_line
+    logger.setLevel(log_level)
     logger.addHandler(handler)
     warnlog.addHandler(handler)
     return logger
