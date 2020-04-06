@@ -1,5 +1,9 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.36
+- New logger format with name instead of module
+- Nodesrevers can call polyinterface.set_log_format if they don't like the default
+
 ### Version 2.0.35
 - Use logger basicConifg so settings are shared by other modules used by NodeServers
 - Add module to logger, asked all devs for opinions but nobody responded.

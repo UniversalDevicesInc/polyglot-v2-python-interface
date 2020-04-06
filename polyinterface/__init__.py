@@ -1,7 +1,7 @@
-from .polyinterface import Interface, Node, Controller, LOGGER, unload_interface, get_network_interface
 
+from .polyinterface import Interface, Node, Controller, unload_interface, get_network_interface, LOGGER, set_log_format
 
-__version__ = '2.0.35'
+__version__ = '2.0.36'
 __description__ = 'UDI Polyglot v2 Interface'
 __url__ = 'https://github.com/UniversalDevicesInc/polyglot-v2-python-interface'
 __author__ = 'James Milne'

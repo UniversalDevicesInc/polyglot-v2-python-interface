@@ -53,36 +53,34 @@ class LoggerWriter(object):
     def flush(self):
         pass
 
+# Make a handler that writes to a file,
+# making a new file at midnight and keeping 3 backups
+_handler = logging.handlers.TimedRotatingFileHandler("./logs/debug.log", when="midnight", backupCount=30)
+def set_log_format(fmt_string='%(asctime)s %(threadName)-10s %(name)-18s %(levelname)-8s %(module)s:%(funcName)s: %(message)s'):
+    # Format each log message like this
+    formatter = logging.Formatter(fmt_string)
+    # Attach the formatter to the handler
+    _handler.setFormatter(formatter)
+
 def setup_log():
     # Log Location
     # path = os.path.dirname(sys.argv[0])
     if not os.path.exists('./logs'):
         os.makedirs('./logs')
-    log_filename = "./logs/debug.log"
-    log_level = logging.DEBUG  # Could be e.g. "DEBUG" or "WARNING"
-
     # ### Logging Section ################################################################################
     logging.captureWarnings(True)
-    # Set the log level to LOG_LEVEL
-    # Make a handler that writes to a file,
-    # making a new file at midnight and keeping 3 backups
-    handler = logging.handlers.TimedRotatingFileHandler(log_filename, when="midnight", backupCount=30)
-    # Format each log message like this
-    formatter = logging.Formatter('%(asctime)s [%(threadName)-10s] [%(module)-16s] [%(levelname)-5s] %(message)s')
-    # Attach the formatter to the handler
-    handler.setFormatter(formatter)
+    set_log_format()
     # Attach the handler to the logger
     logging.basicConfig(
-        handlers=[handler],
+        handlers=[_handler],
         level=logging.DEBUG
     )
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('polyinterface')
     logger.propagate = False # If True we get duplicates?
     warnlog = logging.getLogger('py.warnings')
     warnings.formatwarning = warning_on_one_line
-    logger.setLevel(log_level)
-    logger.addHandler(handler)
-    warnlog.addHandler(handler)
+    logger.addHandler(_handler)
+    warnlog.addHandler(_handler)
     return logger
 
 LOGGER = setup_log()
