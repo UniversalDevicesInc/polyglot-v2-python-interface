@@ -33,6 +33,7 @@ jobs:
         python setup.py bdist_wheel
 
     - name: Publish distribution to Test PyPI
+      if: github.event_name == 'push'
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.pypitoken_test }}
@@ -43,6 +44,7 @@ jobs:
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.pypitoken }}
+        skip-existing:
 
     - name: Notify Results
       if: always()
