@@ -1,5 +1,11 @@
 
-from .polyinterface import Interface, Node, Controller, unload_interface, get_network_interface, LOGGER, set_log_format
+import logging
+
+LOGGER = logging.getLogger(__name__)
+from .polylogging import set_log_format, setup_log
+setup_log(LOGGER)
+from .polyinterface import Interface, Node, Controller, unload_interface, get_network_interface
+
 
 __version__ = '2.0.36'
 __description__ = 'UDI Polyglot v2 Interface'

@@ -2,10 +2,11 @@
 
 ### Version 2.0.36
 - New logger format with name instead of module
-- Nodesrevers can call polyinterface.set_log_format if they don't like the default
+- Nodesrevers can call polyinterface.set_log_format if they don't like the default which is:
+  '%(asctime)s %(threadName)-10s %(name)-18s %(levelname)-8s %(module)s:%(funcName)s: %(message)s'
 
 ### Version 2.0.35
-- Use logger basicConifg so settings are shared by other modules used by NodeServers
+- Use logger basicConfig so settings are shared by other modules used by NodeServers
 - Add module to logger, asked all devs for opinions but nobody responded.
 
 ### Version 2.0.34
