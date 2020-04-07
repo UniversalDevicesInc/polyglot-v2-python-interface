@@ -28,9 +28,18 @@ jobs:
       with:
         password: ${{ secrets.pypitoken_test }}
         repository_url: https://test.pypi.org/legacy/
+      uses: rtCamp/action-slack-notify@v2.0.0
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_USER: GitHub
+        SLACK_TITLE: Test PyPi released
 
     - name: Publish distribution to PyPI
       if: startsWith(github.event.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.pypitoken }}
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_USER: GitHub
+        SLACK_TITLE: PyPi released
