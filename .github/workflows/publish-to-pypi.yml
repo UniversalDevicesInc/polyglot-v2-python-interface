@@ -1,0 +1,59 @@
+name: Publish PyPI and TestPyPI
+
+on: push
+
+jobs:
+  build-n-publish:
+    name: Build and publish to PyPI and TestPyPI
+    runs-on: ubuntu-18.04
+
+    steps:
+    - name: Notify Start
+      uses: innocarpe/actions-slack@v1
+      with:
+        status: ${{ job.status }} # Required
+        success_text: '@${{ github.actor }} just started the workflow for `${{ github.ref }}`'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # Required
+
+    - uses: actions/checkout@master
+
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install dependencies
+      run: python -m pip install --upgrade pip setuptools wheel
+
+    - name: Build With setup.py
+      run: |
+        python setup.py sdist
+        python setup.py bdist_wheel
+
+    - name: Publish distribution to Test PyPI
+      if: github.event_name == 'push'
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.pypitoken_test }}
+        repository_url: https://test.pypi.org/legacy/
+
+    - name: Publish distribution to PyPI
+      if: startsWith(github.event.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        password: ${{ secrets.pypitoken }}
+        skip-existing:
+
+    - name: Notify Results
+      if: always()
+      uses: innocarpe/actions-slack@v1
+      with:
+        status: ${{ job.status }} # Required
+        success_text: 'Step Succeeded 🚀' # Optional
+        failure_text: 'Step Failed 😱' # Optional
+        cancelled_text: 'Step Cancelled ⚠️' # Optional
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # Required
