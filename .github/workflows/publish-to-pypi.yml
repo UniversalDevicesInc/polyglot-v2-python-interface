@@ -35,7 +35,7 @@ jobs:
     - name: Publish distribution to Test PyPI
       if: github.event_name == 'push'
       # This will fail if release already exists, should we use  --skip-existing
-      run: scripts/publish.sh --repository-url https://test.pypi.org/legacy/ --skip-existing d -u __token__ -p ${{ secrets.pypitoken_test }}
+      run: scripts/publish.sh --repository-url https://test.pypi.org/legacy/ --skip-existing -u __token__ -p ${{ secrets.pypitoken_test }}
 
     - name: Publish distribution to PyPI
       if: startsWith(github.ref, 'refs/tags')
