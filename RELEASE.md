@@ -13,3 +13,9 @@ We will be using [Semantic Versioning](https://semver.org/) Which is MAJOR.MINOR
 
 We will be following methods defined [Managing releases in a repository
 ](https://help.github.com/en/github/administering-a-repository/managing-releases-in-a-repository)
+
+https://pypi.org
+https://test.pypi.org
+
+Created github user udi-pg-dev to email pg-dev@universal-devices.com
+Created pypi and test pypi users udi-pg-dev
