@@ -1,5 +1,9 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.37
+- Fixed bug for nodeservers that do not pass in name to polyinterface.Interface call.
+- Added PyLogger class as suggested by @firstone
+
 ### Version 2.0.36
 - New logger format with name instead of module
 - Nodesrevers can call polyinterface.set_log_format if they don't like the default which is:

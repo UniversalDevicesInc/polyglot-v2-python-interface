@@ -1,13 +1,9 @@
 
-import logging
 
-LOGGER = logging.getLogger(__name__)
-from .polylogging import set_log_format, setup_log
-setup_log(LOGGER)
+from .polylogger import LOGGER
 from .polyinterface import Interface, Node, Controller, unload_interface, get_network_interface
 
-
-__version__ = '2.0.36'
+__version__ = '2.0.37'
 __description__ = 'UDI Polyglot v2 Interface'
 __url__ = 'https://github.com/UniversalDevicesInc/polyglot-v2-python-interface'
 __author__ = 'James Milne'
