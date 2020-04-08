@@ -149,8 +149,8 @@ class Interface(object):
         self.topicSelfConnection = 'udi/polyglot/connections/{}'.format(self.profileNum)
         self._threads = {}
         self._threads['socket'] = Thread(target = self._startMqtt, name = 'Interface')
-        LOGGER.info('mqtt Client: name={}'.format(envVar))
-        self._mqttc = mqtt.Client(envVar+self.profileNum, True)
+        #LOGGER.info('mqtt Client: name={}'.format(envVar))
+        self._mqttc = mqtt.Client(envVar, True)
         # self._mqttc.will_set(self.topicSelfConnection, json.dumps({'node': self.profileNum, 'connected': False}), retain=True)
         self._mqttc.on_connect = self._connect
         self._mqttc.on_message = self._message
