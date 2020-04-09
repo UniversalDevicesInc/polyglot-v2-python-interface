@@ -1,6 +1,6 @@
 
 # When running from command line don't set user so it will use your ~/.pypirc file
-PYPI_ARGS != if [ ${PYPI_USER} = "" ]; then echo "" ; else echo "-u ${PYPI_USER} -p ${PYPY_PASSWORD}" ; fi
+PYPI_ARGS != if [ ${PYPI_USER} = "" ]; then echo "" ; else echo "-u ${PYPI_USER} -p ${PYPI_PASSWORD}" ; fi
 
 all: install_dependancies build publish_pypi_test publish_pypi
 
