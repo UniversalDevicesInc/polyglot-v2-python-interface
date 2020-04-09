@@ -24,7 +24,10 @@ jobs:
       with:
         python-version: 3.7
 
-    - name: Install dependencies
+    - name: Run Tests
+      run: make test_setup test
+
+    - name: Install Build dependencies
       run: make install_dependancies
 
     - name: Build With setup.py
@@ -37,6 +40,14 @@ jobs:
       env:
         PYPI_USER: __token__
         PYPI_PASSWORD: ${{ secrets.pypitoken_test }}
+      if: success()
+      uses: innocarpe/actions-slack@v1
+      with:
+        status: ${{ job.status }} # Required
+        success_text: '@${{ github.actor }} Released to PyPi `${{ github.ref }}`'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # Required
 
     - name: Publish distribution to Test
       if: startsWith(github.ref, 'refs/tags')

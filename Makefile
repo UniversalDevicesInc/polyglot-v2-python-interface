@@ -16,3 +16,10 @@ publish_pypi_test:
 
 publish_pypi:
 	twine upload -u ${PYPI_USER} -p ${PYPY_PASSWORD} dist/*
+
+# If you already have a ~/.polyglot then make sure Test=1 is in it!
+test_setup:
+	if [ ! -d ~/.polyglot ]; then mkdir ~/.polyglot ; echo "Test=1\nUSE_HTTPS=false" > ~/.polyglot/.env ; fi
+
+test:
+	./scripts/tests.sh

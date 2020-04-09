@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-python tests.py
+python scripts/tests.py
 st=$?
 cat logs/debug.log
 exit $st
