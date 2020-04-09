@@ -38,12 +38,12 @@ jobs:
         PYPI_USER: __token__
         PYPI_PASSWORD: ${{ secrets.pypitoken_test }}
 
-    - name: Publish distribution to Test PyPI
-      if: github.event_name == 'push'
+    - name: Publish distribution to Test
+      if: startsWith(github.ref, 'refs/tags')
       run: make publish_pypi
       env:
         PYPI_USER: __token__
-        PYPI_PASSWORD: ${{ secrets.pypitoken_test }}
+        PYPI_PASSWORD: ${{ secrets.pypitoken }}
 
     - name: Notify Results
       if: always()

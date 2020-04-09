@@ -15,4 +15,4 @@ publish_pypi_test:
 	twine upload --repository-url https://test.pypi.org/legacy/ --skip-existing ${PYPI_ARGS} dist/*
 
 publish_pypi:
-	twine upload --repository-url -u ${PYPI_USER} -p ${PYPY_PASSWORD} dist/*
+	twine upload -u ${PYPI_USER} -p ${PYPY_PASSWORD} dist/*
