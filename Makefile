@@ -1,9 +1,7 @@
 
 # When running from command line don't set user so it will use your ~/.pypirc file
-ifdef $(PYPI_USER)
-  PYPI_ARGS = -u ${PYPI_USER} -p ${PYPI_PASSWORD}
-else
-  PYPI_ARGS =
+ifneq ($(PYPI_USER),)
+  PYPI_ARGS = -u '${PYPI_USER}' -p '${PYPI_PASSWORD}'
 endif
 
 .PHONY: install_dependancies build publish_pypi_test publish_pypi
