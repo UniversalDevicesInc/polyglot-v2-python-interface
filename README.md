@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/UniversalDevicesInc/polyglot-v2-python-interface.svg?branch=master)](https://travis-ci.org/UniversalDevicesInc/polyglot-v2-python-interface)
+![Test And Publish](https://github.com/UniversalDevicesInc/polyglot-v2-python-interface/workflows/Publish%20PyPI%20and%20TestPyPI/badge.svg)
 
 # UDI Polyglot v2 Interface Module
 
