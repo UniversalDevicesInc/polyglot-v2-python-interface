@@ -15,7 +15,7 @@ publish_pypi_test:
 	twine upload --repository-url https://test.pypi.org/legacy/ --skip-existing ${PYPI_ARGS} dist/*
 
 publish_pypi:
-	twine upload -u ${PYPI_USER} -p ${PYPY_PASSWORD} dist/*
+	twine upload ${PYPI_ARGS} dist/*
 
 # If you already have a ~/.polyglot then make sure Test=1 is in it!
 test_setup:
