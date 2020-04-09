@@ -20,6 +20,7 @@ publish_pypi:
 # If you already have a ~/.polyglot then make sure Test=1 is in it!
 test_setup:
 	if [ ! -d ~/.polyglot ]; then mkdir ~/.polyglot ; echo "Test=1\nUSE_HTTPS=false" > ~/.polyglot/.env ; fi
+	python setup.py install
 
 test:
 	./scripts/tests.sh
