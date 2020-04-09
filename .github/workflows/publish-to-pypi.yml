@@ -25,21 +25,25 @@ jobs:
         python-version: 3.7
 
     - name: Install dependencies
-      run: python -m pip install --upgrade pip setuptools wheel twine
+      run: make install_dependancies
 
     - name: Build With setup.py
-      run: |
-        python setup.py sdist
-        python setup.py bdist_wheel
+      run: make build
 
     - name: Publish distribution to Test PyPI
       if: github.event_name == 'push'
       # This will fail if release already exists, should we use  --skip-existing
-      run: scripts/publish.sh --repository-url https://test.pypi.org/legacy/ --skip-existing -u __token__ -p ${{ secrets.pypitoken_test }}
+      run: make publish_pypi_test
+      env:
+        PYPI_USER: __token__
+        PYPI_PASSWORD: ${{ secrets.pypitoken_test }}
 
-    - name: Publish distribution to PyPI
-      if: startsWith(github.ref, 'refs/tags')
-      run: scripts/publish.sh -u __token__ -p ${{ secrets.pypitoken }}
+    - name: Publish distribution to Test PyPI
+      if: github.event_name == 'push'
+      run: make publish_pypi
+      env:
+        PYPI_USER: __token__
+        PYPI_PASSWORD: ${{ secrets.pypitoken_test }}
 
     - name: Notify Results
       if: always()
