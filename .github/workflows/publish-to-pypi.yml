@@ -40,15 +40,6 @@ jobs:
       env:
         PYPI_USER: __token__
         PYPI_PASSWORD: ${{ secrets.pypitoken_test }}
-# TODO: How to notify if the publish happens?
-#      if: success()
-#      uses: innocarpe/actions-slack@v1
-#      with:
-#        status: ${{ job.status }} # Required
-#        success_text: '@${{ github.actor }} Released to PyPi `${{ github.ref }}`'
-#      env:
-#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Required
-3        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }} # Required
 
     - name: Publish distribution to Test
       if: startsWith(github.ref, 'refs/tags')
