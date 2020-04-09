@@ -6,7 +6,7 @@ endif
 ifneq ($(PYPI_PASSWORD),)
   PYPI_PASSWORD_ARG = -p ${PYPI_PASSWORD}
 endif
-PYPI_ARGS=$(PYPI_USER_ARG) $(PYPI_PASSWORD_ARG)
+PYPI_ARGS=dist/* $(PYPI_USER_ARG) $(PYPI_PASSWORD_ARG)
 
 .PHONY: install_dependancies build publish_pypi_test publish_pypi
 
@@ -21,10 +21,10 @@ build:
 
 # This uses skip existing so it doesn't fail in regression
 publish_pypi_test:
-	twine upload --repository-url https://test.pypi.org/legacy/ --skip-existing $(PYPI_ARGS) dist/*
+	twine upload --repository-url https://test.pypi.org/legacy/ --skip-existing $(PYPI_ARGS)
 
 publish_pypi:
-	twine upload $(PYPI_ARGS) dist/*
+	twine upload $(PYPI_ARGS)
 
 # If you already have a ~/.polyglot then make sure Test=1 is in it!
 test_setup:
