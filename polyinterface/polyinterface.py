@@ -570,7 +570,7 @@ class Interface(object):
     def get_network_interface(self,interface='default'):
         return get_network_interface(interface=interface)
 
-    def get_server_data(self,check_profile=True):
+    def get_server_data(self,check_profile=True,build_profile=None):
         """
         get_server_data: Loads the server.json and returns as a dict
         :param check_profile: Calls the check_profile method if True
@@ -595,10 +595,10 @@ class Interface(object):
             serverdata['profile_version'] = None
         LOGGER.debug('get_server_data: {}'.format(serverdata))
         if check_profile:
-            self.check_profile(serverdata)
+            self.check_profile(serverdata,build_profile=build_profile)
         return serverdata
 
-    def check_profile(self,serverdata):
+    def check_profile(self,serverdata,build_profile=None):
         """
         Check if the profile is up to date by comparing the server.json profile_version
         against the profile_version stored in the db customData
@@ -622,6 +622,9 @@ class Interface(object):
             LOGGER.info('check_profile: Updated needed: "{}" == "{}"'.format(serverdata['profile_version'],cdata['profile_version']))
             update_profile = True
         if update_profile:
+            if build_profile:
+                LOGGER.info('Building Profile...')
+                build_profile()
             st = self.installprofile()
             cdata['profile_version'] = serverdata['profile_version']
             self.saveCustomData(cdata)
