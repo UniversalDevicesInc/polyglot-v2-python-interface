@@ -19,3 +19,7 @@ https://test.pypi.org
 
 Created github user udi-pg-dev to email pg-dev@universal-devices.com
 Created pypi and test pypi users udi-pg-dev
+
+Documentation
+https://realpython.com/documenting-python-code/
+Use NumPy/SciPy Docstrings
