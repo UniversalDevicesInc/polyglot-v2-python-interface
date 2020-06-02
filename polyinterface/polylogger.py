@@ -26,14 +26,15 @@ class PolyLogger:
         logging.captureWarnings(True)
         self.set_log_format(PolyLogger.FMT_STRING)
         # Attach the handler to the logger
-        logging.basicConfig(
-            handlers=[self.handler],
-            level=PolyLogger.LEVEL
-        )
+        #logging.basicConfig(
+        #    handlers=[self.handler],
+        #    level=PolyLogger.LEVEL
+        #)
 
         self.logger = logging.getLogger(PolyLogger.NAME)
-        self.logger.propagate = False # If True we get duplicates?
+        self.logger.propagate = True
         self.logger.addHandler(self.handler)
+        self.logger.setLevel(PolyLogger.LEVEL)
 
         self.warnlog = logging.getLogger(PolyLogger.WARN_LOGGER_NAME)
         warnings.formatwarning = self.warning_on_one_line

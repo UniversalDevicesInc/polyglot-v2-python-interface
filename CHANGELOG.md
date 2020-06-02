@@ -1,5 +1,13 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.0.41
+- Remove call to basicConfig so referenced module logging will not show up which
+  is the behavior prior to 2.0.35
+- Will add an option to put it back when I have time.
+
+### Version 2.0.38-2.0.40
+- Version changes while getting pypi automated releases to work
+
 ### Version 2.0.37
 - Fixed bug for nodeservers that do not pass in name to polyinterface.Interface call.
 - Added PyLogger class as suggested by @firstone
