@@ -594,11 +594,16 @@ class Interface(object):
         if not 'profile_version' in serverdata:
             serverdata['profile_version'] = None
         LOGGER.debug('get_server_data: {}'.format(serverdata))
+        if check_profile is None:
+            force = True
+            check_profile = True
+        else:
+            force = False
         if check_profile:
-            self.check_profile(serverdata,build_profile=build_profile)
+            self.check_profile(serverdata,force=force,build_profile=build_profile)
         return serverdata
 
-    def check_profile(self,serverdata,build_profile=None):
+    def check_profile(self,serverdata,force=False,build_profile=None):
         """
         Check if the profile is up to date by comparing the server.json profile_version
         against the profile_version stored in the db customData
@@ -612,7 +617,10 @@ class Interface(object):
             LoGGER.info('check_profile: Ignoring since nodeserver does not have profile_version')
             return
         update_profile = False
-        if not 'profile_version' in cdata:
+        if force:
+            LOGGER.info('check_profile: Force is enabled.')
+            update_profile=True
+        elif not 'profile_version' in cdata:
             LOGGER.info('check_profile: Updated needed since it has never been recorded.')
             update_profile = True
         elif serverdata['profile_version'] == cdata['profile_version']:

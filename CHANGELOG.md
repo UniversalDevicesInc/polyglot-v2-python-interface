@@ -1,5 +1,10 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.1.0
+- Add log handler set_basic_config method to control logging for referenced modules
+- Add get_server_data check_profile=None will force updating profile to use
+  while testing and you want the profile loaded on each restart
+
 ### Version 2.0.41
 - Remove call to basicConfig so referenced module logging will not show up which
   is the behavior prior to 2.0.35
