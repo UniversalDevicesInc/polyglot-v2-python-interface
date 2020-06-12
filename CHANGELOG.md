@@ -1,5 +1,11 @@
 # __Changelog for Polyglot Python Interface v2__
 
+### Version 2.1.0
+- Add log handler set_basic_config method to control logging for referenced modules
+- Setting "profile_version": null
+  in server.json will force updating profile on all restarts, which should only
+  be used while testing profiles changes during development.
+
 ### Version 2.0.41
 - Remove call to basicConfig so referenced module logging will not show up which
   is the behavior prior to 2.0.35
