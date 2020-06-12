@@ -574,6 +574,10 @@ class Interface(object):
         """
         get_server_data: Loads the server.json and returns as a dict
         :param check_profile: Calls the check_profile method if True
+
+        If profile_version in json is null then profile will be loaded on
+        every restart.
+        
         """
         serverdata = {'version': 'unknown'}
         # Read the SERVER info from the json.
@@ -592,27 +596,31 @@ class Interface(object):
             version = '0.0.0.0'
         serverdata['version'] = version
         if not 'profile_version' in serverdata:
-            serverdata['profile_version'] = None
+            serverdata['profile_version'] = "NotDefined"
         LOGGER.debug('get_server_data: {}'.format(serverdata))
         if check_profile:
-            self.check_profile(serverdata,build_profile=build_profile)
+            force = True if serverdata['profile_version'] is None else False
+            self.check_profile(serverdata,force=force,build_profile=build_profile)
         return serverdata
 
-    def check_profile(self,serverdata,build_profile=None):
+    def check_profile(self,serverdata,force=False,build_profile=None):
         """
         Check if the profile is up to date by comparing the server.json profile_version
         against the profile_version stored in the db customData
         The profile will be installed if necessary.
         """
-        LOGGER.debug('check_profile:      config={}'.format(self.config))
+        LOGGER.debug('check_profile: force={} build_profile={}'.format(force,build_profile))
         cdata = deepcopy(self.config['customData'])
         LOGGER.debug('check_profile:      customData={}'.format(cdata))
         LOGGER.debug('check_profile: profile_version={}'.format(serverdata['profile_version']))
-        if serverdata['profile_version'] is None:
-            LoGGER.info('check_profile: Ignoring since nodeserver does not have profile_version')
+        if serverdata['profile_version'] == "NotDefined":
+            LOGGER.error('check_profile: Ignoring since nodeserver does not have profile_version')
             return
         update_profile = False
-        if not 'profile_version' in cdata:
+        if force:
+            LOGGER.warning('check_profile: Force is enabled.')
+            update_profile=True
+        elif not 'profile_version' in cdata:
             LOGGER.info('check_profile: Updated needed since it has never been recorded.')
             update_profile = True
         elif serverdata['profile_version'] == cdata['profile_version']:
