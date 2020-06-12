@@ -32,5 +32,5 @@ The releases are handled by Github actions
 - Set Tag version to the relese with a v prefix, e.g. v2.1.0
 - Target: should always be master
 - Set Release title: Version 2.1.0
-- Describe the release.  Currently copy the info added to RELEASE.md
+- Describe the release.  Currently copy the info added to CHANGELOG.md
 - This is a pre-release is not yet tested.
