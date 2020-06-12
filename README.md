@@ -37,3 +37,20 @@ From there just read the code itself, it is fully explained step by step.
 
 ### How to Enable your NodeServer in the Cloud
 [Link to PGC Interface](https://github.com/UniversalDevicesInc/pgc-python-interface/blob/master/README.md)
+
+### Controlling logging
+
+By default when the Polyglot Python Interface is started up the logging is in DEBUG mode.  This is how it was setup from the very beginning.  If you want to change the level use:  
+```
+import polyinterface,logging
+LOGGER = polyinterface.LOGGER
+LOGGER.setLevel(logging.WARNING)
+```
+
+Beginning with version 2.1.0 it will also show all logging for modules you may referece, but only WARNING level by default.  If you want to configure the levels differently you can use:
+```
+polyinterface.LOG_HANDLER.set_basic_config(True,logging.DEBUG)
+```
+This will enable logging for everything that doesn't have a specific logger tied to it and sets the level to DEBUG
+
+There are examples of this being used in the udi-poly-template-python mentioned above.
